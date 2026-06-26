@@ -4,6 +4,7 @@ import { Maps } from "@/pages/Maps";
 import { Board } from "@/pages/Board";
 import { Forum } from "@/pages/Forum";
 import { MyStrata } from "@/pages/MyStrata";
+import { DropCard } from "@/pages/DropCard";
 import { Login } from "@/pages/Login";
 import { Toaster } from "@/lib/toast";
 import { AuthProvider, useAuth } from "@/lib/auth";
@@ -25,6 +26,7 @@ export default function App() {
           <Route path="/board" element={<Board />} />
           <Route path="/forum" element={<Forum />} />
           <Route path="/my-strata" element={<MyStrata />} />
+          <Route path="/drop" element={<DropCard />} />
           <Route path="/login" element={<Login />} />
           <Route path="*" element={<Landing />} />
         </Routes>
