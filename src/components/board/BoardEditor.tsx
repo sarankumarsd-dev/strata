@@ -48,7 +48,7 @@ const TOOLS: { id: ToolId; icon: any; label: string; hint: string }[] = [
 const PANEL = "border border-white/10 bg-transparent backdrop-blur-xl shadow-2xl";
 
 export function BoardEditor({ map, initial }: Props) {
-  const [tool, setTool] = useState<ToolId>("zone");
+  const [tool, setTool] = useState<ToolId>("select");
   const [doc, setDoc] = useState<BoardDoc>(initial?.board_json ?? EMPTY_BOARD);
   const [history, setHistory] = useState<BoardDoc[]>([]);
   const [future, setFuture] = useState<BoardDoc[]>([]);
