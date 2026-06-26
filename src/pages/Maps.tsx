@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, MapPin, Plus } from "lucide-react";
 import { AppHeader } from "@/components/AppHeader";
+import { Button } from "@/components/ui";
 import { MapThumb } from "@/components/board/MapThumb";
 import { MAP_LIST } from "@/lib/maps";
 
@@ -9,10 +10,24 @@ export function Maps() {
     <div className="min-h-screen">
       <AppHeader />
       <section className="mx-auto max-w-7xl px-4 py-12">
-        <div className="mb-8">
-          <div className="font-mono text-[10px] uppercase tracking-widest text-primary">New board</div>
-          <h1 className="mt-2 font-heading text-3xl font-bold md:text-4xl">Pick a map to start</h1>
-          <p className="mt-2 text-muted-foreground">All the maps are in 8K HD satellite imagery and 10× zoomable. Click on any map to open the strategy board.</p>
+        <div className="mb-8 flex items-end justify-between">
+          <div>
+            <div className="font-mono text-[10px] uppercase tracking-widest text-primary">New board</div>
+            <h1 className="mt-2 font-heading text-3xl font-bold md:text-4xl">Pick a map to start</h1>
+            <p className="mt-2 text-muted-foreground">All the maps are in 8K HD satellite imagery and 10× zoomable. Click on any map to open the strategy board.</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Link to="/drop">
+              <Button variant="outline" className="gap-2">
+                <MapPin className="h-4 w-4" /> Mark Drop
+              </Button>
+            </Link>
+            <Link to="/my-strata">
+              <Button className="gap-2">
+                <Plus className="h-4 w-4" /> New Strategy
+              </Button>
+            </Link>
+          </div>
         </div>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {MAP_LIST.map((m) => (
