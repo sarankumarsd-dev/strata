@@ -44,11 +44,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [session?.user?.id]);
 
   async function checkUsername(userId: string) {
+    // upsert ensures profile row always exists (covers Google OAuth users)
+    await supabase.from("profiles").upsert({ id: userId }, { onConflict: "id", ignoreDuplicates: true });
     const { data } = await supabase
       .from("profiles")
       .select("username")
       .eq("id", userId)
-      .single();
+      .maybeSingle();
     setHasUsername(!!data?.username);
   }
 
