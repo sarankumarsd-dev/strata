@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { ArrowRight, Crosshair, Mountain, Route as RouteIcon, Sparkles, Target } from "lucide-react";
+import { ArrowRight, Crosshair, MapPin, Mountain, Route as RouteIcon, Sparkles, Target } from "lucide-react";
 
 import { AppHeader } from "@/components/AppHeader";
 import { StrategyCard } from "@/components/StrategyCard";
@@ -41,13 +41,21 @@ export function Landing() {
               Plan zone fights like a pro. Mark god spots, draw rotation splits, project gun ranges, and let AI critique your push — all on official BGMI maps.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
-              <Link to="/maps">
-                <Button size="lg" className="gap-2 glow-primary">
-                  Start a strategy board <ArrowRight className="h-4 w-4" />
-                </Button>
-              </Link>
               <Link to="/forum">
                 <Button size="lg" variant="outline">Browse the forum</Button>
+              </Link>
+            </div>
+            <div className="mt-4 flex flex-wrap gap-3">
+              <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground self-center mr-1">Start your strata</div>
+              <Link to="/maps">
+                <Button size="lg" className="gap-2 glow-primary">
+                  Strategy Card <ArrowRight className="h-4 w-4" />
+                </Button>
+              </Link>
+              <Link to="/drop">
+                <Button size="lg" variant="outline" className="gap-2">
+                  <MapPin className="h-4 w-4" /> Drop Card
+                </Button>
               </Link>
             </div>
           </div>
