@@ -3,3 +3,4 @@ dist
 .env
 .agents
 public/maps/*.png
+package-lock.json
