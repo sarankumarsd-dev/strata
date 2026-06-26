@@ -1,0 +1,171 @@
+import { useState, useEffect } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { Plus, Trash2, LogOut, User } from "lucide-react";
+import { AppHeader } from "@/components/AppHeader";
+import { Button } from "@/components/ui";
+import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/lib/auth";
+import { toast } from "@/lib/toast";
+
+interface Strategy {
+  id: string;
+  map: string;
+  title: string;
+  description: string | null;
+  tags: string[] | null;
+  is_public: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export function MyStrata() {
+  const { user, loading: authLoading, signOut } = useAuth();
+  const navigate = useNavigate();
+  const [strategies, setStrategies] = useState<Strategy[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [username, setUsername] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!authLoading && !user) {
+      navigate("/login", { replace: true });
+    }
+  }, [user, authLoading, navigate]);
+
+  useEffect(() => {
+    if (!user) return;
+    fetchStrategies();
+    supabase.from("profiles").select("username").eq("id", user.id).single()
+      .then(({ data }) => setUsername(data?.username ?? null));
+  }, [user]);
+
+  async function fetchStrategies() {
+    setLoading(true);
+    const { data, error } = await supabase
+      .from("strategies")
+      .select("id, map, title, description, tags, is_public, created_at, updated_at")
+      .eq("user_id", user!.id)
+      .order("updated_at", { ascending: false });
+
+    if (error) {
+      toast.error("Failed to load strategies");
+    } else {
+      setStrategies(data ?? []);
+    }
+    setLoading(false);
+  }
+
+  async function deleteStrategy(id: string) {
+    const { error } = await supabase.from("strategies").delete().eq("id", id);
+    if (error) {
+      toast.error("Failed to delete");
+    } else {
+      setStrategies((prev) => prev.filter((s) => s.id !== id));
+      toast.success("Strategy deleted");
+    }
+  }
+
+  async function handleSignOut() {
+    await signOut();
+    navigate("/", { replace: true });
+  }
+
+  if (authLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="font-mono text-sm text-muted-foreground animate-pulse">Loading…</div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen">
+      <AppHeader />
+      <section className="mx-auto max-w-7xl px-4 py-12">
+        <div className="mb-8 flex items-end justify-between">
+          <div>
+            <div className="font-mono text-[10px] uppercase tracking-widest text-primary">My Strata</div>
+            <h1 className="mt-2 font-heading text-3xl font-bold md:text-4xl">Your saved strategies</h1>
+            <p className="mt-2 text-muted-foreground flex items-center gap-2">
+              <User className="h-3.5 w-3.5" />
+              {username ? `@${username}` : user?.email}
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" size="sm" onClick={handleSignOut} className="gap-2 text-muted-foreground">
+              <LogOut className="h-4 w-4" /> Sign out
+            </Button>
+            <Link to="/maps">
+              <Button className="gap-2">
+                <Plus className="h-4 w-4" /> New board
+              </Button>
+            </Link>
+          </div>
+        </div>
+
+        {loading ? (
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="h-48 rounded-xl border border-border bg-card animate-pulse" />
+            ))}
+          </div>
+        ) : strategies.length === 0 ? (
+          <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border py-24 text-center">
+            <p className="text-muted-foreground">No strategies saved yet.</p>
+            <Link to="/maps" className="mt-4">
+              <Button variant="outline" className="gap-2">
+                <Plus className="h-4 w-4" /> Create your first board
+              </Button>
+            </Link>
+          </div>
+        ) : (
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {strategies.map((s) => (
+              <div key={s.id} className="group relative flex flex-col rounded-xl border border-border bg-card overflow-hidden transition-all hover:border-primary/50 hover:shadow-lg">
+                {/* Map color strip */}
+                <div className="h-2 w-full bg-gradient-to-r from-primary to-secondary opacity-70" />
+                <div className="flex flex-1 flex-col gap-2 p-4">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <h3 className="font-heading font-semibold truncate group-hover:text-primary transition-colors">{s.title}</h3>
+                      <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">{s.map}</p>
+                    </div>
+                    <button
+                      onClick={() => deleteStrategy(s.id)}
+                      className="grid h-7 w-7 shrink-0 place-items-center rounded-md text-muted-foreground opacity-0 group-hover:opacity-100 hover:bg-destructive/20 hover:text-destructive transition-all"
+                      title="Delete"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                  {s.description && (
+                    <p className="text-sm text-muted-foreground line-clamp-2">{s.description}</p>
+                  )}
+                  {s.tags && s.tags.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mt-auto pt-2">
+                      {s.tags.slice(0, 4).map((tag) => (
+                        <span key={tag} className="rounded-full border border-primary/30 bg-primary/10 px-2 py-0.5 font-mono text-[10px] text-primary">
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  <div className="flex items-center justify-between mt-2">
+                    <span className="font-mono text-[10px] text-muted-foreground">
+                      {new Date(s.updated_at).toLocaleDateString()}
+                    </span>
+                    <Link
+                      to={`/board?map=${s.map}&strategy=${s.id}`}
+                      className="text-[11px] font-semibold text-primary hover:underline"
+                    >
+                      Open →
+                    </Link>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+    </div>
+  );
+}

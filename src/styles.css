@@ -1,0 +1,200 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:is(.dark *));
+
+@font-face {
+  font-family: "Bitcount Grid Single";
+  src: url("/fonts/BitcountGridSingle.ttf") format("truetype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* =========================================================
+   Strata — BGMI Strategy — Esports Neon design system
+   Dark base, cyan primary, magenta secondary, lime/amber alerts.
+   ========================================================= */
+
+@theme inline {
+  --font-sans: "Plus Jakarta Sans", system-ui, -apple-system, sans-serif;
+  --font-heading: "Outfit", system-ui, sans-serif;
+  --font-display: "Bitcount Grid Single", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-danger: var(--danger);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-ring-offset-background: var(--background);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+}
+
+:root {
+  --radius: 0.5rem;
+
+  /* Esports neon dark — deep near-black, cyan primary, magenta accent */
+  --background: oklch(0.16 0.018 260);
+  --foreground: oklch(0.97 0.005 250);
+
+  --surface: oklch(0.20 0.022 260);
+  --surface-2: oklch(0.24 0.025 260);
+
+  --card: oklch(0.20 0.022 260);
+  --card-foreground: oklch(0.97 0.005 250);
+  --popover: oklch(0.22 0.024 260);
+  --popover-foreground: oklch(0.97 0.005 250);
+
+  --primary: oklch(0.80 0.16 295);          /* light violet */
+  --primary-foreground: oklch(0.16 0.018 295);
+
+  --secondary: oklch(0.70 0.22 350);        /* hot magenta */
+  --secondary-foreground: oklch(0.16 0.018 260);
+
+  --muted: oklch(0.26 0.022 260);
+  --muted-foreground: oklch(0.70 0.015 250);
+
+  --accent: oklch(0.30 0.045 220);
+  --accent-foreground: oklch(0.97 0.005 250);
+
+  --destructive: oklch(0.66 0.22 25);
+  --destructive-foreground: oklch(0.98 0.005 250);
+
+  --success: oklch(0.78 0.18 145);
+  --warning: oklch(0.82 0.17 75);
+  --danger: oklch(0.66 0.22 25);
+
+  --border: oklch(0.30 0.025 260);
+  --input: oklch(0.26 0.025 260);
+  --ring: oklch(0.82 0.16 200);
+
+  --sidebar: oklch(0.18 0.020 260);
+  --sidebar-foreground: oklch(0.95 0.005 250);
+  --sidebar-primary: oklch(0.80 0.16 295);
+  --sidebar-primary-foreground: oklch(0.16 0.018 295);
+  --sidebar-accent: oklch(0.24 0.025 260);
+  --sidebar-accent-foreground: oklch(0.97 0.005 250);
+  --sidebar-border: oklch(0.30 0.025 260);
+  --sidebar-ring: oklch(0.82 0.16 200);
+
+  /* Gradients & shadows */
+  --gradient-hero: radial-gradient(ellipse at 30% 0%, color-mix(in oklab, var(--primary) 22%, transparent), transparent 60%),
+                   radial-gradient(ellipse at 80% 90%, color-mix(in oklab, var(--secondary) 18%, transparent), transparent 55%),
+                   var(--background);
+  --gradient-accent: linear-gradient(135deg, var(--primary), var(--secondary));
+  --shadow-glow-primary: 0 0 0 1px color-mix(in oklab, var(--primary) 40%, transparent),
+                         0 8px 32px -8px color-mix(in oklab, var(--primary) 60%, transparent);
+  --shadow-glow-secondary: 0 0 0 1px color-mix(in oklab, var(--secondary) 40%, transparent),
+                           0 8px 32px -8px color-mix(in oklab, var(--secondary) 60%, transparent);
+
+  /* HUD grid for the map canvas */
+  --hud-grid: repeating-linear-gradient(0deg, color-mix(in oklab, var(--primary) 8%, transparent) 0 1px, transparent 1px 80px),
+              repeating-linear-gradient(90deg, color-mix(in oklab, var(--primary) 8%, transparent) 0 1px, transparent 1px 80px);
+}
+
+@layer base {
+  * { border-color: var(--color-border); }
+  html, body { background-color: var(--color-background); color: var(--color-foreground); font-family: var(--font-sans); margin: 0; }
+  body { font-feature-settings: "ss01", "cv11"; }
+  h1, h2, h3, h4, h5, h6 { font-family: var(--font-heading); letter-spacing: -0.01em; }
+  .font-mono { font-family: var(--font-mono); }
+  .font-display { font-family: var(--font-display); }
+  .font-heading { font-family: var(--font-heading); }
+}
+
+@utility hud-grid {
+  background-image: var(--hud-grid);
+}
+
+@utility glow-primary {
+  box-shadow: var(--shadow-glow-primary);
+}
+
+@utility glow-secondary {
+  box-shadow: var(--shadow-glow-secondary);
+}
+
+@utility scanline {
+  position: relative;
+}
+@utility scanline-after {
+  &::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(0deg, transparent 0 2px, color-mix(in oklab, var(--foreground) 4%, transparent) 2px 3px);
+    pointer-events: none;
+  }
+}
+
+@keyframes silver-shine {
+  0%   { left: -75%; }
+  100% { left: 150%; }
+}
+
+@utility btn-silver-shine {
+  position: relative;
+  overflow: hidden;
+  &::before {
+    content: "";
+    position: absolute;
+    top: -20%;
+    left: -75%;
+    width: 50%;
+    height: 140%;
+    background: linear-gradient(
+      100deg,
+      transparent 0%,
+      rgba(255,255,255,0.18) 20%,
+      rgba(220,220,255,0.85) 40%,
+      rgba(255,255,255,1.0)  50%,
+      rgba(220,220,255,0.85) 60%,
+      rgba(255,255,255,0.18) 80%,
+      transparent 100%
+    );
+    transform: skewX(-15deg);
+    animation: silver-shine 1.8s ease-in-out infinite;
+    pointer-events: none;
+    z-index: 10;
+  }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 0 0 color-mix(in oklab, var(--primary) 50%, transparent); }
+  50%      { box-shadow: 0 0 0 8px color-mix(in oklab, var(--primary) 0%, transparent); }
+}
+@utility animate-pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
+}

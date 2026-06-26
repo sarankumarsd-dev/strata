@@ -1,0 +1,5 @@
+node_modules
+dist
+.env
+.agents
+public/maps/*.png
