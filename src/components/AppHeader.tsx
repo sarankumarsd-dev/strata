@@ -41,7 +41,7 @@ export function AppHeader() {
             Forum
           </Link>
           <Link to="/maps">
-            <Button className="ml-2 px-5 py-2 text-base font-medium btn-silver-shine">Start a board</Button>
+            <Button className="ml-2 px-5 py-2 text-base font-medium btn-silver-shine">Start your strata</Button>
           </Link>
         </nav>
       </div>
