@@ -44,6 +44,10 @@ export function MapCanvas(props: Props) {
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
 
+  // Draggable zoom widget position (bottom-left default)
+  const [zoomPos, setZoomPos] = useState<{ x: number; y: number } | null>(null);
+  const zoomDragRef = useRef<{ startX: number; startY: number; origX: number; origY: number } | null>(null);
+
   // Pointer tracking
   const pointersRef = useRef<Map<number, { x: number; y: number }>>(new Map());
   const panStartRef = useRef<{ panX: number; panY: number; px: number; py: number } | null>(null);
@@ -77,7 +81,7 @@ export function MapCanvas(props: Props) {
       const factor = Math.exp(-e.deltaY * 0.0015);
       const currentZoom = zoomRef.current;
       const currentPan = panRef.current;
-      const newZ = Math.max(1, Math.min(8, currentZoom * factor));
+      const newZ = Math.max(1, Math.min(16,currentZoom * factor));
       const wx = (cx - currentPan.x) / currentZoom;
       const wy = (cy - currentPan.y) / currentZoom;
       const minX = rect.width * (1 - newZ);
@@ -111,7 +115,7 @@ export function MapCanvas(props: Props) {
 
   // --- Zoom / pan helpers ---
 
-  function clampZoom(z: number) { return Math.max(1, Math.min(8, z)); }
+  function clampZoom(z: number) { return Math.max(1, Math.min(16,z)); }
 
   function clampPan(px: number, py: number, z: number) {
     const rect = containerRef.current?.getBoundingClientRect();
@@ -338,8 +342,37 @@ export function MapCanvas(props: Props) {
         </svg>
       </div>
 
-      {/* ===== Zoom controls ===== */}
-      <div className="absolute bottom-3 left-3 z-10 flex flex-col gap-1 rounded-md border border-white/10 bg-transparent backdrop-blur-xl p-1 shadow-2xl">
+      {/* ===== Zoom controls (draggable) ===== */}
+      <div
+        className="absolute z-10 flex flex-col gap-1 rounded-md border border-white/10 bg-transparent backdrop-blur-xl p-1 shadow-2xl cursor-grab active:cursor-grabbing"
+        style={zoomPos ? { left: zoomPos.x, top: zoomPos.y, bottom: "auto" } : { bottom: 12, left: 12 }}
+        onMouseDown={(e) => {
+          e.stopPropagation();
+          const el = e.currentTarget;
+          const rect = el.getBoundingClientRect();
+          const parent = el.parentElement!.getBoundingClientRect();
+          zoomDragRef.current = {
+            startX: e.clientX,
+            startY: e.clientY,
+            origX: rect.left - parent.left,
+            origY: rect.top - parent.top,
+          };
+          function onMove(ev: MouseEvent) {
+            if (!zoomDragRef.current) return;
+            setZoomPos({
+              x: zoomDragRef.current.origX + (ev.clientX - zoomDragRef.current.startX),
+              y: zoomDragRef.current.origY + (ev.clientY - zoomDragRef.current.startY),
+            });
+          }
+          function onUp() {
+            zoomDragRef.current = null;
+            window.removeEventListener("mousemove", onMove);
+            window.removeEventListener("mouseup", onUp);
+          }
+          window.addEventListener("mousemove", onMove);
+          window.addEventListener("mouseup", onUp);
+        }}
+      >
         <button
           type="button"
           aria-label="Zoom in"
