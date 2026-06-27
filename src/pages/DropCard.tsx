@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Plus, Save, X, MapPin } from "lucide-react";
+import { ArrowLeft, ArrowRight, Plus, Save, X, MapPin } from "lucide-react";
 import { AppHeader } from "@/components/AppHeader";
 import { Button, Input } from "@/components/ui";
 import { MapThumb } from "@/components/board/MapThumb";
@@ -121,7 +121,7 @@ export function DropCard() {
     return (
       <div className="min-h-screen">
         <AppHeader />
-        <section className="mx-auto max-w-5xl px-4 py-12">
+        <section className="mx-auto max-w-7xl px-4 py-12">
           <div className="mb-8">
             <div className="font-mono text-[10px] uppercase tracking-widest text-primary">Drop Card</div>
             <h1 className="mt-2 font-heading text-3xl font-bold">Pick a map</h1>
@@ -132,14 +132,17 @@ export function DropCard() {
               <button
                 key={map.id}
                 onClick={() => setSelectedMap(map.id)}
-                className="group relative aspect-video overflow-hidden rounded-xl border border-border transition-all hover:border-primary/60 hover:shadow-lg"
+                className="group block overflow-hidden rounded-xl border border-border bg-card text-left transition-all hover:border-primary/50 hover:glow-primary"
               >
-                <MapThumb map={map} />
-                <div className="absolute inset-0 flex items-end bg-gradient-to-t from-black/70 to-transparent p-4">
-                  <div className="text-left">
-                    <p className="font-heading font-bold text-white">{map.name}</p>
-                    <p className="font-mono text-[10px] text-white/60">{map.biome}</p>
+                <div className="relative aspect-video overflow-hidden bg-muted">
+                  <MapThumb map={map} showLabels />
+                </div>
+                <div className="flex items-center justify-between p-4">
+                  <div>
+                    <h3 className="font-heading text-lg font-semibold group-hover:text-primary transition-colors">{map.name}</h3>
+                    <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">{map.biome}</p>
                   </div>
+                  <ArrowRight className="h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-1 group-hover:text-primary" />
                 </div>
               </button>
             ))}
