@@ -50,19 +50,8 @@ export function Board() {
 
   return (
     <div className="min-h-screen">
-      <header className="sticky top-0 z-40 border-b border-border bg-background/80 backdrop-blur-xl">
-        <div className="flex h-14 items-center justify-between px-4">
-          <Link to="/" className="font-heading text-lg font-bold tracking-tight">
-            Stra<span className="text-primary">ta</span>
-          </Link>
-          <Link to="/maps" className="rounded-md px-4 py-1.5 text-sm font-semibold transition-colors" style={{ color: "#39ff14", border: "1px solid #39ff1466", background: "#39ff140f" }}>
-            ← Back to maps
-          </Link>
-        </div>
-      </header>
-
       {loading ? (
-        <div className="flex h-[calc(100dvh-56px)] items-center justify-center">
+        <div className="flex h-[100dvh] items-center justify-center">
           <Loader2 className="h-6 w-6 animate-spin text-primary" />
         </div>
       ) : (

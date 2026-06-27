@@ -2,8 +2,9 @@ import { useState, useEffect, useRef } from "react";
 import {
   MousePointer2, Circle as CircleIcon, MapPin, Octagon, Mountain, TrendingDown,
   Crosshair, Route as RouteIcon, Flame, Type as TypeIcon, Undo2, Redo2, Trash2,
-  Save, Eye, Sparkles, PanelRightClose, PanelRightOpen,
+  Save, Eye, Sparkles, PanelRightClose, PanelRightOpen, ArrowLeft,
 } from "lucide-react";
+import { Link } from "react-router-dom";
 
 import type { BoardDoc, BoardItem, Pt, ToolId } from "@/lib/board-types";
 import { EMPTY_BOARD, newId } from "@/lib/board-types";
@@ -177,7 +178,7 @@ export function BoardEditor({ map, initial }: Props) {
 
   return (
     <TooltipProvider delayDuration={150}>
-    <div className="relative h-[calc(100dvh-56px)] w-full overflow-hidden bg-background">
+    <div className="relative h-[100dvh] w-full overflow-hidden bg-background">
       {/* ===== Full-bleed map — fills the entire viewport ===== */}
       <div className="absolute inset-0">
         <MapCanvas
@@ -200,7 +201,11 @@ export function BoardEditor({ map, initial }: Props) {
       </div>
 
       {/* ===== Floating top bar ===== */}
-      <div className={`absolute left-2 right-2 top-2 z-30 flex items-center gap-2 rounded-xl px-3 py-2 ${PANEL}`}>
+      <div className={`absolute left-0 right-0 top-0 z-30 flex items-center gap-2 px-3 py-2 ${PANEL} rounded-none`}>
+        <Link to="/maps" className="flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-semibold transition-colors hover:bg-accent/50" style={{ color: "#39ff14", border: "1px solid #39ff1466", background: "#39ff140f" }}>
+          <ArrowLeft className="h-3.5 w-3.5" /> Back to maps
+        </Link>
+        <div className="mx-1 h-4 w-px bg-border/60" />
         <div className="flex flex-1 items-center gap-2 min-w-0">
           <span className="font-mono text-[10px] uppercase tracking-widest text-primary">{map.name}</span>
           <span className="text-muted-foreground">·</span>
@@ -300,7 +305,7 @@ export function BoardEditor({ map, initial }: Props) {
       <aside
         className={`
           absolute z-20 space-y-5 overflow-y-auto rounded-xl p-4 ${PANEL}
-          right-2 top-[4.5rem] bottom-14 w-64 md:bottom-2 md:w-72
+          right-2 top-[3rem] bottom-14 w-64 md:bottom-2 md:w-72
           transition-transform duration-300 ease-in-out
           ${panelOpen ? "translate-x-0" : "translate-x-[110%]"}
         `}
