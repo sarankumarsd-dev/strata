@@ -339,7 +339,7 @@ export function MapCanvas(props: Props) {
       </div>
 
       {/* ===== Zoom controls ===== */}
-      <div className="absolute bottom-3 right-3 z-10 flex flex-col gap-1 rounded-md border border-white/10 bg-transparent backdrop-blur-xl p-1 shadow-2xl">
+      <div className="absolute bottom-3 left-3 z-10 flex flex-col gap-1 rounded-md border border-white/10 bg-transparent backdrop-blur-xl p-1 shadow-2xl">
         <button
           type="button"
           aria-label="Zoom in"
