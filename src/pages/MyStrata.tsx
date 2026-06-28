@@ -244,7 +244,16 @@ export function MyStrata() {
           ) : (
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {dropCards.map((d) => (
-                <div key={d.id} className="group relative flex flex-col rounded-xl border border-border bg-card overflow-hidden transition-all hover:border-primary/50 hover:shadow-lg">
+                <div key={d.id} className="drop-card group relative flex flex-col rounded-xl border border-border bg-card overflow-hidden transition-all hover:border-primary/50 hover:shadow-lg">
+                  {/* Traveling red border — visible when delete button is hovered */}
+                  <svg className="travel-border-svg pointer-events-none absolute inset-0 w-full h-full opacity-0" style={{ borderRadius: "inherit" }}>
+                    <rect x="1" y="1" width="99%" height="98%" rx="11" ry="11"
+                      fill="none" stroke="#ef4444" strokeWidth="2.5"
+                      strokeDasharray="40 960" strokeLinecap="round"
+                      pathLength="1000"
+                      style={{ animation: "travel-border 1.2s linear infinite", strokeDashoffset: 40 }}
+                    />
+                  </svg>
                   <div className="h-2 w-full bg-gradient-to-r from-primary/60 to-primary opacity-70" />
                   <div className="flex flex-1 flex-col gap-2 p-4">
                     <div className="flex items-start justify-between gap-2">
@@ -254,7 +263,7 @@ export function MyStrata() {
                       </div>
                       <button
                         onClick={() => deleteDropCard(d.id)}
-                        className="grid h-7 w-7 shrink-0 place-items-center rounded-md text-muted-foreground opacity-0 group-hover:opacity-100 hover:bg-destructive/20 hover:text-destructive transition-all"
+                        className="delete-btn grid h-7 w-7 shrink-0 place-items-center rounded-md text-muted-foreground opacity-0 group-hover:opacity-100 hover:bg-destructive/20 hover:text-destructive transition-all"
                         title="Delete"
                       >
                         <Trash2 className="h-3.5 w-3.5" />

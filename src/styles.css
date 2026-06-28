@@ -206,3 +206,11 @@
   60%       { transform: translateX(-4px); }
   80%       { transform: translateX(4px); }
 }
+
+@keyframes travel-border {
+  from { stroke-dashoffset: 40; }
+  to   { stroke-dashoffset: -960; }
+}
+.drop-card:has(.delete-btn:hover) .travel-border-svg {
+  opacity: 1;
+}
