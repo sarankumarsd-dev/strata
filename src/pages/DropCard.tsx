@@ -216,15 +216,15 @@ export function DropCard() {
                       ? <img src={logo} alt={pin.teamName} className="h-6 w-6 object-contain shrink-0" />
                       : <div className="h-6 w-6 rounded-full shrink-0 border-2 border-white/60 m-1" style={{ backgroundColor: pin.color }} />;
                     })()}
-                    <span className="pr-1.5 text-[10px] font-semibold text-white whitespace-nowrap">{pin.teamName}</span>
+                    <span className="pr-3 text-[10px] font-semibold text-white whitespace-nowrap">{pin.teamName}</span>
                     <div className="absolute bottom-0 left-0 right-0 h-0.5" style={{ backgroundColor: pin.color }} />
-                    <button
-                      onClick={(e) => { e.stopPropagation(); removePin(pin.id); }}
-                      className="absolute -top-1 -right-1 hidden group-hover:flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-white shadow"
-                    >
-                      <X className="h-2.5 w-2.5" />
-                    </button>
                   </div>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); removePin(pin.id); }}
+                    className="absolute -top-1.5 -right-1.5 hidden group-hover:flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-white shadow"
+                  >
+                    <X className="h-2.5 w-2.5" />
+                  </button>
                 </div>
               ))}
             </div>
