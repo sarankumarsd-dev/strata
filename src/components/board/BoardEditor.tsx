@@ -75,6 +75,8 @@ export function BoardEditor({ map, initial }: Props) {
   const titleInputRef = useRef<HTMLInputElement>(null);
   const [pinned, setPinned] = useState(false);
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [renameDialogOpen, setRenameDialogOpen] = useState(false);
+  const [shakeSave, setShakeSave] = useState(false);
 
   // Drop card import
   const [dropPins, setDropPins] = useState<DropPin[]>([]);
@@ -183,9 +185,20 @@ export function BoardEditor({ map, initial }: Props) {
     commit(EMPTY_BOARD);
   }
 
+  function triggerShake() {
+    setShakeSave(true);
+    setTimeout(() => setShakeSave(false), 500);
+  }
+
   async function handleSave() {
-    if (!title.trim()) { toast.error("Add a title first"); return; }
     if (!user) { toast.error("Sign in to save strategies"); return; }
+    if (!title.trim()) { triggerShake(); return; }
+    // Block save on new strategies with default title
+    if (!initial?.id && title.trim() === "Untitled strategy") {
+      triggerShake();
+      setRenameDialogOpen(true);
+      return;
+    }
     setSaving(true);
     try {
       const tags = tagsText.split(",").map((s) => s.trim()).filter(Boolean);
@@ -323,7 +336,13 @@ export function BoardEditor({ map, initial }: Props) {
             </button>
           )}
         </div>
-        <Button onClick={handleSave} disabled={saving} variant="default" className="gap-2">
+        <Button
+          onClick={handleSave}
+          disabled={saving}
+          variant="default"
+          className="gap-2"
+          style={shakeSave ? { animation: "shake 0.4s ease" } : undefined}
+        >
           <Save className="h-4 w-4" /> <span className="hidden sm:inline">{saving ? "Saving…" : initial?.id ? "Update" : "Save"}</span>
         </Button>
       </div>
@@ -501,6 +520,38 @@ export function BoardEditor({ map, initial }: Props) {
           </div>
         </aside>
     </div>
+
+    {/* ===== Rename before save dialog ===== */}
+    {renameDialogOpen && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+        <div className="w-full max-w-sm rounded-xl border border-border bg-card p-6 shadow-2xl">
+          <h2 className="font-heading text-lg font-bold mb-1">Name your strategy</h2>
+          <p className="text-sm text-muted-foreground mb-4">Give it a name before saving.</p>
+          <Input
+            value={title === "Untitled strategy" ? "" : title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="e.g. Pochinki Rush Strat"
+            autoFocus
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && title.trim() && title.trim() !== "Untitled strategy") {
+                setRenameDialogOpen(false);
+                handleSave();
+              }
+            }}
+          />
+          <div className="flex gap-2 mt-4">
+            <Button
+              className="flex-1"
+              disabled={!title.trim() || title.trim() === "Untitled strategy"}
+              onClick={() => { setRenameDialogOpen(false); handleSave(); }}
+            >
+              Save
+            </Button>
+            <Button variant="outline" onClick={() => setRenameDialogOpen(false)}>Cancel</Button>
+          </div>
+        </div>
+      </div>
+    )}
 
     {/* ===== Import Drop Card dialog ===== */}
     {importDialogOpen && (
