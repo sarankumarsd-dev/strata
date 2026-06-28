@@ -5,6 +5,15 @@ import type { MapInfo } from "@/lib/maps";
 import { MapThumb } from "@/components/board/MapThumb";
 import { Minus, Plus, Maximize2 } from "lucide-react";
 
+export interface DropPin {
+  id: string;
+  teamName: string;
+  color: string;
+  x: number;
+  y: number;
+  logoUrl?: string;
+}
+
 interface Props {
   map: MapInfo;
   doc: BoardDoc;
@@ -21,6 +30,7 @@ interface Props {
   onCommitBuilding: () => void;
   onRemove: (id: string) => void;
   readOnly?: boolean;
+  dropPins?: DropPin[];
 }
 
 // How many px of movement before a touch-start is treated as a pan drag
@@ -32,7 +42,7 @@ const DOUBLE_TAP_MS = 320;
 export function MapCanvas(props: Props) {
   const {
     map, doc, tool, zoneRadius, gunId, rotationSplit, rushMode,
-    buildingPoints, onAdd, onUpdateBuilding, onCommitBuilding, onRemove, readOnly,
+    buildingPoints, onAdd, onUpdateBuilding, onCommitBuilding, onRemove, readOnly, dropPins,
   } = props;
 
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -340,6 +350,29 @@ export function MapCanvas(props: Props) {
               fill="none" stroke="var(--primary)" strokeWidth={2 / zoom} strokeDasharray="6 4" opacity="0.5" />
           )}
         </svg>
+
+        {/* ===== Drop card pins overlay ===== */}
+        {dropPins?.map((pin) => (
+          <div
+            key={pin.id}
+            className="absolute pointer-events-none"
+            style={{
+              left: `${pin.x * 100}%`,
+              top: `${pin.y * 100}%`,
+              transform: `translate(-50%, -100%) scale(${1 / zoom})`,
+              transformOrigin: "bottom center",
+            }}
+          >
+            <div className="relative flex items-center rounded-lg bg-black/80 shadow-lg overflow-hidden">
+              {pin.logoUrl
+                ? <img src={pin.logoUrl} alt={pin.teamName} className="h-6 w-6 object-contain shrink-0" />
+                : <div className="h-6 w-6 rounded-full shrink-0 border-2 border-white/60 m-1" style={{ backgroundColor: pin.color }} />
+              }
+              <span className="pr-1.5 text-[10px] font-semibold text-white whitespace-nowrap">{pin.teamName}</span>
+              <div className="absolute bottom-0 left-0 right-0 h-0.5" style={{ backgroundColor: pin.color }} />
+            </div>
+          </div>
+        ))}
       </div>
 
       {/* ===== Zoom controls (draggable) ===== */}

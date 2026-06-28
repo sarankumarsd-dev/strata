@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import {
   MousePointer2, Circle as CircleIcon, MapPin, Octagon, Mountain, TrendingDown,
   Crosshair, Route as RouteIcon, Flame, Type as TypeIcon, Undo2, Redo2, Trash2,
-  Save, Eye, Sparkles, PanelRightClose, PanelRightOpen, ArrowLeft,
+  Save, Eye, Sparkles, PanelRightClose, PanelRightOpen, ArrowLeft, Layers, X,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 
@@ -11,6 +11,7 @@ import { EMPTY_BOARD, newId } from "@/lib/board-types";
 import { GUNS } from "@/lib/guns";
 import type { MapInfo } from "@/lib/maps";
 import { MapCanvas } from "@/components/board/MapCanvas";
+import type { DropPin } from "@/components/board/MapCanvas";
 import { toast } from "@/lib/toast";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth";
@@ -75,6 +76,14 @@ export function BoardEditor({ map, initial }: Props) {
   const [pinned, setPinned] = useState(false);
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Drop card import
+  const [dropPins, setDropPins] = useState<DropPin[]>([]);
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
+  const [savedDropCards, setSavedDropCards] = useState<{ id: string; title: string; pins: any[] }[]>([]);
+  const [dropCardSearch, setDropCardSearch] = useState("");
+  const [bgmiTeams, setBgmiTeams] = useState<{ name: string; logo_url: string }[]>([]);
+  const [activeDropCardTitle, setActiveDropCardTitle] = useState<string | null>(null);
+
   // Auto-show panel when cursor approaches right edge; auto-hide when it leaves.
   useEffect(() => {
     const EDGE_THRESHOLD = 40; // px from right edge to trigger open
@@ -101,6 +110,21 @@ export function BoardEditor({ map, initial }: Props) {
       .order("updated_at", { ascending: false })
       .then(({ data }) => { if (data) setSavedStrategies(data); });
   }, [user, map.id]);
+
+  useEffect(() => {
+    if (!user) return;
+    supabase
+      .from("drop_cards")
+      .select("id, title, pins")
+      .eq("user_id", user.id)
+      .eq("map", map.id)
+      .order("updated_at", { ascending: false })
+      .then(({ data }) => { if (data) setSavedDropCards(data); });
+  }, [user, map.id]);
+
+  useEffect(() => {
+    supabase.from("bgmi_teams").select("name, logo_url").then(({ data }) => { if (data) setBgmiTeams(data); });
+  }, []);
 
   const filteredStrategies = savedStrategies.filter((s) =>
     s.title.toLowerCase().includes(title.toLowerCase()) && s.title !== title
@@ -213,6 +237,7 @@ export function BoardEditor({ map, initial }: Props) {
           onUpdateBuilding={setBuilding}
           onCommitBuilding={commitBuilding}
           onRemove={removeItem}
+          dropPins={dropPins}
         />
         {/* In-canvas instruction strip — hidden on mobile (bottom toolbar handles it) */}
         <div className="pointer-events-none absolute bottom-3 left-1/2 -translate-x-1/2 hidden rounded-md bg-transparent backdrop-blur-xl border border-white/10 px-3 py-1.5 font-mono text-xs text-muted-foreground md:block">
@@ -279,6 +304,25 @@ export function BoardEditor({ map, initial }: Props) {
             <Sparkles className="h-4 w-4" /> <span className="hidden md:inline">AI: {aiButtonForTool.label}</span>
           </Button>
         )}
+        <div className="relative">
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-2 border-primary/40 text-primary hover:bg-primary/10"
+            onClick={() => { setImportDialogOpen(true); setDropCardSearch(""); }}
+          >
+            <Layers className="h-4 w-4" />
+            <span className="hidden sm:inline">{activeDropCardTitle ?? "Import Drop"}</span>
+          </Button>
+          {activeDropCardTitle && (
+            <button
+              onClick={() => { setDropPins([]); setActiveDropCardTitle(null); }}
+              className="absolute -top-1.5 -right-1.5 h-4 w-4 flex items-center justify-center rounded-full bg-destructive text-white shadow hover:bg-destructive/80"
+            >
+              <X className="h-2.5 w-2.5" />
+            </button>
+          )}
+        </div>
         <Button onClick={handleSave} disabled={saving} variant="default" className="gap-2">
           <Save className="h-4 w-4" /> <span className="hidden sm:inline">{saving ? "Saving…" : initial?.id ? "Update" : "Save"}</span>
         </Button>
@@ -457,6 +501,55 @@ export function BoardEditor({ map, initial }: Props) {
           </div>
         </aside>
     </div>
+
+    {/* ===== Import Drop Card dialog ===== */}
+    {importDialogOpen && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => setImportDialogOpen(false)}>
+        <div className="w-full max-w-sm rounded-xl border border-border bg-card p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="font-heading text-base font-bold">Import Drop Card</h2>
+            <button onClick={() => setImportDialogOpen(false)} className="text-muted-foreground hover:text-foreground"><X className="h-4 w-4" /></button>
+          </div>
+          <input
+            className="w-full rounded-md border border-border bg-background/60 px-3 py-2 text-sm outline-none focus:border-primary/60 mb-2"
+            placeholder="Search drop cards…"
+            value={dropCardSearch}
+            onChange={(e) => setDropCardSearch(e.target.value)}
+            autoFocus
+          />
+          <div className="max-h-64 overflow-y-auto flex flex-col gap-1">
+            {savedDropCards
+              .filter((dc) => dc.title.toLowerCase().includes(dropCardSearch.toLowerCase()))
+              .map((dc) => (
+                <button
+                  key={dc.id}
+                  className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm hover:bg-accent/60 text-left w-full"
+                  onClick={() => {
+                    const pins: DropPin[] = (dc.pins ?? []).map((p: any) => ({
+                      id: p.id,
+                      teamName: p.teamName,
+                      color: p.color,
+                      x: p.x,
+                      y: p.y,
+                      logoUrl: bgmiTeams.find((t) => t.name === p.teamName)?.logo_url,
+                    }));
+                    setDropPins(pins);
+                    setActiveDropCardTitle(dc.title);
+                    setImportDialogOpen(false);
+                  }}
+                >
+                  <Layers className="h-4 w-4 text-primary shrink-0" />
+                  <span className="flex-1 truncate">{dc.title}</span>
+                  <span className="font-mono text-xs text-muted-foreground">{dc.pins?.length ?? 0} teams</span>
+                </button>
+              ))}
+            {savedDropCards.filter((dc) => dc.title.toLowerCase().includes(dropCardSearch.toLowerCase())).length === 0 && (
+              <p className="text-xs text-muted-foreground text-center py-6">No drop cards found for this map</p>
+            )}
+          </div>
+        </div>
+      </div>
+    )}
     </TooltipProvider>
   );
 }

@@ -185,11 +185,35 @@ export function DropCard() {
   const mapInfo = getMap(selectedMap);
 
   return (
-    <div className="flex min-h-screen flex-col">
-      <AppHeader />
-      <div className="flex flex-1 overflow-hidden" style={{ height: "calc(100vh - 56px)" }}>
+    <div className="flex h-[100dvh] flex-col overflow-hidden">
+      {/* Top bar — flush to top, no AppHeader */}
+      <div className="relative z-30 flex shrink-0 items-center gap-2 border-b border-white/10 bg-transparent backdrop-blur-xl px-3 py-2">
+        <button
+          onClick={() => navigate(-1)}
+          className="flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-semibold transition-colors hover:bg-accent/50"
+          style={{ color: "#39ff14", border: "1px solid #39ff1466", background: "#39ff140f" }}
+        >
+          <ArrowLeft className="h-3.5 w-3.5" /> Back to maps
+        </button>
+        <div className="mx-1 h-4 w-px bg-border/60" />
+        <span className="font-mono text-sm uppercase tracking-widest text-primary font-bold">{mapInfo.name}</span>
+        <span className="text-muted-foreground">·</span>
+        <span className="font-heading text-base font-semibold text-foreground/80">Drop Card</span>
+        <div className="ml-auto flex items-center gap-2">
+          <Button
+            size="sm"
+            className="gap-2"
+            onClick={() => setSaveDialogOpen(true)}
+            disabled={pins.length === 0}
+          >
+            <Save className="h-4 w-4" /> Save
+          </Button>
+        </div>
+      </div>
+
+      <div className="flex flex-1 overflow-hidden">
         {/* Map area */}
-        <div className="relative flex flex-1 items-center justify-center bg-black/30 p-4">
+        <div className="relative flex flex-1 items-center justify-center bg-black/30">
           <div
             ref={mapRef}
             onClick={handleMapClick}
@@ -199,7 +223,7 @@ export function DropCard() {
               zoomAround(e.clientX - rect.left, e.clientY - rect.top, zoom * (e.deltaY < 0 ? 1.15 : 1 / 1.15));
             }}
             className={`relative overflow-hidden rounded-xl border border-border ${selectedTeamIdx !== null ? "cursor-crosshair" : "cursor-default"}`}
-            style={{ width: "min(100%, calc(100vh - 140px))", aspectRatio: "1 / 1" }}
+            style={{ height: "min(100%, 100vw - 256px)", width: "min(calc(100% - 16px), calc(100vh - 80px))", aspectRatio: "1 / 1" }}
           >
             {/* Zoomable inner layer */}
             <div style={{ position: "absolute", inset: 0, transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`, transformOrigin: "0 0" }}>
@@ -278,14 +302,6 @@ export function DropCard() {
 
         {/* Side panel */}
         <div className="flex w-64 shrink-0 flex-col border-l border-border bg-card/80 backdrop-blur p-4 gap-4 overflow-y-auto">
-          {/* Map label */}
-          <div>
-            <div className="font-mono text-sm uppercase tracking-widest font-bold text-primary">Map</div>
-            <div className="mt-1 font-heading font-bold text-base">{mapInfo.name}</div>
-          </div>
-
-          <div className="border-t border-border" />
-
           {/* Teams */}
           <div className="flex-1">
             <div className="flex items-center justify-between mb-3">
@@ -386,19 +402,6 @@ export function DropCard() {
             </div>
           </div>
 
-          {/* Actions */}
-          <div className="flex flex-col gap-2 pt-2 border-t border-border">
-            <Button variant="ghost" size="sm" className="gap-2 justify-start text-muted-foreground" onClick={() => navigate(-1)}>
-              <ArrowLeft className="h-4 w-4" /> Back
-            </Button>
-            <Button
-              className="gap-2"
-              onClick={() => setSaveDialogOpen(true)}
-              disabled={pins.length === 0}
-            >
-              <Save className="h-4 w-4" /> Save drop card
-            </Button>
-          </div>
         </div>
       </div>
 
