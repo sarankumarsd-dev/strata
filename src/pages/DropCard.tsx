@@ -47,6 +47,7 @@ export function DropCard() {
   const [title, setTitle] = useState("");
   const [saving, setSaving] = useState(false);
   const mapRef = useRef<HTMLDivElement>(null);
+  const pinAreaRef = useRef<HTMLDivElement>(null);
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [zoomPos, setZoomPos] = useState<{ x: number; y: number } | null>(null);
@@ -88,16 +89,11 @@ export function DropCard() {
   }, [dropId]);
 
   function handleMapClick(e: React.MouseEvent<HTMLDivElement>) {
-    if (selectedTeamIdx === null || !mapRef.current) return;
-    const rect = mapRef.current.getBoundingClientRect();
-    // Map image is square with object-contain — compute its rendered bounds
-    const imgSize = Math.min(rect.width, rect.height);
-    const imgOffsetX = (rect.width - imgSize) / 2;
-    const imgOffsetY = (rect.height - imgSize) / 2;
-    const rawX = e.clientX - rect.left;
-    const rawY = e.clientY - rect.top;
-    const x = ((rawX - pan.x) / zoom - imgOffsetX) / imgSize;
-    const y = ((rawY - pan.y) / zoom - imgOffsetY) / imgSize;
+    if (selectedTeamIdx === null || !pinAreaRef.current) return;
+    // Use the actual rendered bounds of the pin area div (which matches the image)
+    const rect = pinAreaRef.current.getBoundingClientRect();
+    const x = (e.clientX - rect.left) / rect.width;
+    const y = (e.clientY - rect.top) / rect.height;
     if (x < 0 || x > 1 || y < 0 || y > 1) return;
     const team = teams[selectedTeamIdx];
     setPins((prev) => [
@@ -195,7 +191,7 @@ export function DropCard() {
       {/* Full-bleed map */}
       <div
         ref={mapRef}
-        className={`absolute inset-0 ${selectedTeamIdx !== null ? "cursor-crosshair" : "cursor-default"}`}
+        className={`absolute inset-0 overflow-hidden ${selectedTeamIdx !== null ? "cursor-crosshair" : "cursor-default"}`}
         onClick={handleMapClick}
         onWheel={(e) => {
           e.preventDefault();
@@ -208,7 +204,7 @@ export function DropCard() {
           <MapThumb map={mapInfo} />
           {/* Pins — inside centered square matching object-contain image bounds */}
           <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <div style={{ position: "relative", aspectRatio: "1 / 1", width: "100%", maxHeight: "100%" }}>
+            <div ref={pinAreaRef} style={{ position: "relative", aspectRatio: "1 / 1", width: "100%", maxHeight: "100%" }}>
               {pins.map((pin) => (
                 <div
                   key={pin.id}
