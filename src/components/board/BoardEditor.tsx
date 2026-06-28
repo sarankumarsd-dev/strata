@@ -33,7 +33,7 @@ interface Props {
 }
 
 const TOOLS: { id: ToolId; icon: any; label: string; hint: string }[] = [
-  { id: "select",         icon: MousePointer2, label: "Select",      hint: "Shift-click an item to delete" },
+  { id: "select",         icon: MousePointer2, label: "Select",      hint: "Click and drag the zoom tool to move it anywhere" },
   { id: "zone",           icon: CircleIcon,    label: "Zone circle", hint: "Click to drop a play-zone" },
   { id: "godspot",        icon: MapPin,        label: "God spot",    hint: "Click to mark elevated cover" },
   { id: "chokespot",      icon: Octagon,       label: "Choke",       hint: "Click to mark a choke point" },
@@ -69,6 +69,9 @@ export function BoardEditor({ map, initial }: Props) {
   const [building, setBuilding] = useState<Pt[]>([]);
   const [saving, setSaving] = useState(false);
   const [panelOpen, setPanelOpen] = useState(false);
+  const [savedStrategies, setSavedStrategies] = useState<{ id: string; title: string }[]>([]);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const titleInputRef = useRef<HTMLInputElement>(null);
   const [pinned, setPinned] = useState(false);
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -87,6 +90,26 @@ export function BoardEditor({ map, initial }: Props) {
     window.addEventListener("mousemove", onMouseMove);
     return () => window.removeEventListener("mousemove", onMouseMove);
   }, [pinned]);
+
+  useEffect(() => {
+    if (!user) return;
+    supabase
+      .from("strategies")
+      .select("id, title")
+      .eq("user_id", user.id)
+      .eq("map", map.id)
+      .order("updated_at", { ascending: false })
+      .then(({ data }) => { if (data) setSavedStrategies(data); });
+  }, [user, map.id]);
+
+  const filteredStrategies = savedStrategies.filter((s) =>
+    s.title.toLowerCase().includes(title.toLowerCase()) && s.title !== title
+  );
+
+  function onSelectStrategy(s: { id: string; title: string }) {
+    setSearchOpen(false);
+    window.location.href = `/board/${s.id}`;
+  }
 
   function onPanelMouseLeave() {
     if (pinned) return;
@@ -207,10 +230,32 @@ export function BoardEditor({ map, initial }: Props) {
         </Link>
         <div className="mx-1 h-4 w-px bg-border/60" />
         <div className="flex flex-1 items-center gap-2 min-w-0">
-          <span className="font-mono text-[10px] uppercase tracking-widest text-primary">{map.name}</span>
+          <span className="font-mono text-sm uppercase tracking-widest text-primary font-bold">{map.name}</span>
           <span className="text-muted-foreground">·</span>
-          <Input value={title} onChange={(e) => setTitle(e.target.value)}
-            className="h-8 max-w-[360px] border-transparent bg-transparent font-heading text-base font-semibold" />
+          <div className="relative max-w-[360px] flex-1">
+            <Input
+              ref={titleInputRef}
+              value={title}
+              onChange={(e) => { setTitle(e.target.value); setSearchOpen(true); }}
+              onFocus={() => setSearchOpen(true)}
+              onBlur={() => setTimeout(() => setSearchOpen(false), 150)}
+              className="h-8 border-transparent bg-transparent font-heading text-base font-semibold"
+            />
+            {searchOpen && filteredStrategies.length > 0 && (
+              <div className="absolute left-0 top-full z-50 mt-1 w-full rounded-md border border-white/10 bg-background/90 backdrop-blur-xl shadow-2xl overflow-hidden">
+                {filteredStrategies.map((s) => (
+                  <button
+                    key={s.id}
+                    type="button"
+                    onMouseDown={() => onSelectStrategy(s)}
+                    className="w-full text-left px-3 py-2 text-sm hover:bg-accent/60 truncate"
+                  >
+                    {s.title}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
         <div className="flex items-center gap-1">
           <Tooltip><TooltipTrigger asChild>
