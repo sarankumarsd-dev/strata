@@ -90,10 +90,15 @@ export function DropCard() {
   function handleMapClick(e: React.MouseEvent<HTMLDivElement>) {
     if (selectedTeamIdx === null || !mapRef.current) return;
     const rect = mapRef.current.getBoundingClientRect();
+    // Map image is square with object-contain — compute its rendered bounds
+    const imgSize = Math.min(rect.width, rect.height);
+    const imgOffsetX = (rect.width - imgSize) / 2;
+    const imgOffsetY = (rect.height - imgSize) / 2;
     const rawX = e.clientX - rect.left;
     const rawY = e.clientY - rect.top;
-    const x = (rawX - pan.x) / (zoom * rect.width);
-    const y = (rawY - pan.y) / (zoom * rect.height);
+    const x = ((rawX - pan.x) / zoom - imgOffsetX) / imgSize;
+    const y = ((rawY - pan.y) / zoom - imgOffsetY) / imgSize;
+    if (x < 0 || x > 1 || y < 0 || y > 1) return;
     const team = teams[selectedTeamIdx];
     setPins((prev) => [
       ...prev.filter((p) => p.teamIdx !== selectedTeamIdx),
@@ -183,11 +188,95 @@ export function DropCard() {
   }
 
   const mapInfo = getMap(selectedMap);
+  const PANEL = "border border-white/10 bg-transparent backdrop-blur-xl shadow-2xl";
 
   return (
-    <div className="flex h-[100dvh] flex-col overflow-hidden">
-      {/* Top bar — flush to top, no AppHeader */}
-      <div className="relative z-30 flex shrink-0 items-center gap-2 border-b border-white/10 bg-transparent backdrop-blur-xl px-3 py-2">
+    <div className="relative h-[100dvh] w-full overflow-hidden">
+      {/* Full-bleed map */}
+      <div
+        ref={mapRef}
+        className={`absolute inset-0 ${selectedTeamIdx !== null ? "cursor-crosshair" : "cursor-default"}`}
+        onClick={handleMapClick}
+        onWheel={(e) => {
+          e.preventDefault();
+          const rect = mapRef.current!.getBoundingClientRect();
+          zoomAround(e.clientX - rect.left, e.clientY - rect.top, zoom * (e.deltaY < 0 ? 1.15 : 1 / 1.15));
+        }}
+      >
+        {/* Zoomable inner layer */}
+        <div style={{ position: "absolute", inset: 0, transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`, transformOrigin: "0 0" }}>
+          <MapThumb map={mapInfo} />
+          {/* Pins — inside centered square matching object-contain image bounds */}
+          <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <div style={{ position: "relative", aspectRatio: "1 / 1", width: "100%", maxHeight: "100%" }}>
+              {pins.map((pin) => (
+                <div
+                  key={pin.id}
+                  className="absolute group"
+                  style={{ left: `${pin.x * 100}%`, top: `${pin.y * 100}%`, transform: `translate(-50%, -100%) scale(${1 / zoom})`, transformOrigin: "bottom center" }}
+                >
+                  <div className="relative flex items-center rounded-lg bg-black/80 shadow-lg overflow-hidden">
+                    {(() => { const logo = bgmiTeams.find(t => t.name === pin.teamName)?.logo_url; return logo
+                      ? <img src={logo} alt={pin.teamName} className="h-6 w-6 object-contain shrink-0" />
+                      : <div className="h-6 w-6 rounded-full shrink-0 border-2 border-white/60 m-1" style={{ backgroundColor: pin.color }} />;
+                    })()}
+                    <span className="pr-1.5 text-[10px] font-semibold text-white whitespace-nowrap">{pin.teamName}</span>
+                    <div className="absolute bottom-0 left-0 right-0 h-0.5" style={{ backgroundColor: pin.color }} />
+                    <button
+                      onClick={(e) => { e.stopPropagation(); removePin(pin.id); }}
+                      className="absolute -top-1 -right-1 hidden group-hover:flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-white shadow"
+                    >
+                      <X className="h-2.5 w-2.5" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Zoom controls */}
+        <div
+          className={`absolute z-10 flex flex-col gap-1 rounded-md p-1 cursor-grab active:cursor-grabbing ${PANEL}`}
+          style={zoomPos ? { left: zoomPos.x, top: zoomPos.y, bottom: "auto" } : { bottom: 12, left: 12 }}
+          onMouseDown={(e) => {
+            e.stopPropagation();
+            const el = e.currentTarget;
+            const rect = el.getBoundingClientRect();
+            const parent = el.parentElement!.getBoundingClientRect();
+            zoomDragRef.current = { startX: e.clientX, startY: e.clientY, origX: rect.left - parent.left, origY: rect.top - parent.top };
+            function onMove(ev: MouseEvent) {
+              if (!zoomDragRef.current) return;
+              setZoomPos({ x: zoomDragRef.current.origX + (ev.clientX - zoomDragRef.current.startX), y: zoomDragRef.current.origY + (ev.clientY - zoomDragRef.current.startY) });
+            }
+            function onUp() { zoomDragRef.current = null; window.removeEventListener("mousemove", onMove); window.removeEventListener("mouseup", onUp); }
+            window.addEventListener("mousemove", onMove);
+            window.addEventListener("mouseup", onUp);
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <button type="button" aria-label="Zoom in" className="grid h-7 w-7 place-items-center rounded hover:bg-accent text-foreground"
+            onClick={() => { const r = mapRef.current!.getBoundingClientRect(); zoomAround(r.width / 2, r.height / 2, zoom * 1.25); }}>
+            <PlusIcon className="h-3.5 w-3.5" />
+          </button>
+          <button type="button" aria-label="Zoom out" className="grid h-7 w-7 place-items-center rounded hover:bg-accent text-foreground"
+            onClick={() => { const r = mapRef.current!.getBoundingClientRect(); zoomAround(r.width / 2, r.height / 2, zoom / 1.25); }}>
+            <Minus className="h-3.5 w-3.5" />
+          </button>
+          <button type="button" aria-label="Reset view" className="grid h-7 w-7 place-items-center rounded hover:bg-accent text-foreground"
+            onClick={resetView}>
+            <Maximize2 className="h-3.5 w-3.5" />
+          </button>
+        </div>
+        {zoom > 1.001 && (
+          <div className="absolute top-12 right-[268px] z-10 rounded-md px-2 py-1 font-mono text-xs text-primary pointer-events-none border border-white/10 bg-transparent backdrop-blur-xl">
+            {zoom.toFixed(1)}×
+          </div>
+        )}
+      </div>
+
+      {/* Top bar — absolute, glass panel matching strategy board */}
+      <div className={`absolute left-0 right-0 top-0 z-30 flex items-center gap-2 px-3 py-2 ${PANEL} rounded-none`}>
         <button
           onClick={() => navigate(-1)}
           className="flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-semibold transition-colors hover:bg-accent/50"
@@ -200,210 +289,116 @@ export function DropCard() {
         <span className="text-muted-foreground">·</span>
         <span className="font-heading text-base font-semibold text-foreground/80">Drop Card</span>
         <div className="ml-auto flex items-center gap-2">
-          <Button
-            size="sm"
-            className="gap-2"
-            onClick={() => setSaveDialogOpen(true)}
-            disabled={pins.length === 0}
-          >
+          <Button size="sm" className="gap-2" onClick={() => setSaveDialogOpen(true)} disabled={pins.length === 0}>
             <Save className="h-4 w-4" /> Save
           </Button>
         </div>
       </div>
 
-      <div className="flex flex-1 overflow-hidden">
-        {/* Map area */}
-        <div className="relative flex flex-1 items-center justify-center bg-black/30">
-          <div
-            ref={mapRef}
-            onClick={handleMapClick}
-            onWheel={(e) => {
-              e.preventDefault();
-              const rect = mapRef.current!.getBoundingClientRect();
-              zoomAround(e.clientX - rect.left, e.clientY - rect.top, zoom * (e.deltaY < 0 ? 1.15 : 1 / 1.15));
-            }}
-            className={`relative overflow-hidden rounded-xl border border-border ${selectedTeamIdx !== null ? "cursor-crosshair" : "cursor-default"}`}
-            style={{ height: "min(100%, 100vw - 256px)", width: "min(calc(100% - 16px), calc(100vh - 80px))", aspectRatio: "1 / 1" }}
-          >
-            {/* Zoomable inner layer */}
-            <div style={{ position: "absolute", inset: 0, transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`, transformOrigin: "0 0" }}>
-            <MapThumb map={mapInfo} />
-            {/* Pins */}
-            {pins.map((pin) => (
-              <div
-                key={pin.id}
-                className="absolute group"
-                style={{ left: `${pin.x * 100}%`, top: `${pin.y * 100}%`, transform: `translate(-50%, -100%) scale(${1 / zoom})`, transformOrigin: "bottom center" }}
-              >
-                <div className="relative flex items-center rounded-lg bg-black/80 shadow-lg overflow-hidden">
-                  {(() => { const logo = bgmiTeams.find(t => t.name === pin.teamName)?.logo_url; return logo
-                    ? <img src={logo} alt={pin.teamName} className="h-6 w-6 object-contain shrink-0" />
-                    : <div className="h-6 w-6 rounded-full shrink-0 border-2 border-white/60 m-1" style={{ backgroundColor: pin.color }} />;
-                  })()}
-                  <span className="pr-1.5 text-[10px] font-semibold text-white whitespace-nowrap">{pin.teamName}</span>
-                  <div className="absolute bottom-0 left-0 right-0 h-0.5" style={{ backgroundColor: pin.color }} />
-                  <button
-                    onClick={(e) => { e.stopPropagation(); removePin(pin.id); }}
-                    className="absolute -top-1 -right-1 hidden group-hover:flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-white shadow"
-                  >
-                    <X className="h-2.5 w-2.5" />
-                  </button>
-                </div>
-              </div>
-            ))}
-            </div>{/* end zoomable layer */}
-
-            {/* Zoom controls */}
-            <div
-              className="absolute z-10 flex flex-col gap-1 rounded-md border border-white/10 bg-transparent backdrop-blur-xl p-1 shadow-2xl cursor-grab active:cursor-grabbing"
-              style={zoomPos ? { left: zoomPos.x, top: zoomPos.y, bottom: "auto" } : { bottom: 12, left: 12 }}
-              onMouseDown={(e) => {
-                e.stopPropagation();
-                const el = e.currentTarget;
-                const rect = el.getBoundingClientRect();
-                const parent = el.parentElement!.getBoundingClientRect();
-                zoomDragRef.current = { startX: e.clientX, startY: e.clientY, origX: rect.left - parent.left, origY: rect.top - parent.top };
-                function onMove(ev: MouseEvent) {
-                  if (!zoomDragRef.current) return;
-                  setZoomPos({ x: zoomDragRef.current.origX + (ev.clientX - zoomDragRef.current.startX), y: zoomDragRef.current.origY + (ev.clientY - zoomDragRef.current.startY) });
-                }
-                function onUp() { zoomDragRef.current = null; window.removeEventListener("mousemove", onMove); window.removeEventListener("mouseup", onUp); }
-                window.addEventListener("mousemove", onMove);
-                window.addEventListener("mouseup", onUp);
-              }}
-              onClick={(e) => e.stopPropagation()}
+      {/* Side panel — absolute right, glass panel */}
+      <div className={`absolute right-0 top-[45px] bottom-0 z-20 flex w-64 flex-col border-l p-4 gap-4 overflow-y-auto ${PANEL} rounded-none`}>
+        {/* Teams */}
+        <div className="flex-1">
+          <div className="flex items-center justify-between mb-3">
+            <span className="font-mono text-sm uppercase tracking-widest font-bold text-primary">Teams</span>
+            <button
+              onClick={() => { setAddingTeam(true); setTeamSearch(""); setNewTeamName(""); }}
+              className="group flex items-center gap-1 overflow-hidden rounded-full border-2 border-pink-400/70 bg-gradient-to-r from-purple-400/30 to-pink-400/30 px-1.5 py-0.5 text-pink-300 transition-all duration-300 hover:from-purple-400/50 hover:to-pink-400/50 hover:border-pink-300 hover:text-pink-200 hover:shadow-[0_0_12px_rgba(236,72,153,0.5)]"
             >
-              <button type="button" aria-label="Zoom in" className="grid h-7 w-7 place-items-center rounded hover:bg-accent text-foreground"
-                onClick={() => { const r = mapRef.current!.getBoundingClientRect(); zoomAround(r.width / 2, r.height / 2, zoom * 1.25); }}>
-                <PlusIcon className="h-3.5 w-3.5" />
-              </button>
-              <button type="button" aria-label="Zoom out" className="grid h-7 w-7 place-items-center rounded hover:bg-accent text-foreground"
-                onClick={() => { const r = mapRef.current!.getBoundingClientRect(); zoomAround(r.width / 2, r.height / 2, zoom / 1.25); }}>
-                <Minus className="h-3.5 w-3.5" />
-              </button>
-              <button type="button" aria-label="Reset view" className="grid h-7 w-7 place-items-center rounded hover:bg-accent text-foreground"
-                onClick={resetView}>
-                <Maximize2 className="h-3.5 w-3.5" />
-              </button>
-            </div>
-            {zoom > 1.001 && (
-              <div className="absolute top-3 right-3 z-10 rounded-md border border-white/10 bg-transparent backdrop-blur-xl px-2 py-1 font-mono text-xs text-primary shadow-2xl pointer-events-none">
-                {zoom.toFixed(1)}×
-              </div>
-            )}
+              <span className="max-w-0 overflow-hidden whitespace-nowrap font-mono text-xs font-bold tracking-wider opacity-0 transition-all duration-300 group-hover:max-w-[2rem] group-hover:opacity-100">Add</span>
+              <Plus className="h-3.5 w-3.5 transition-transform duration-300 group-hover:rotate-90" />
+            </button>
           </div>
 
-          {selectedTeamIdx !== null && (
-            <div className="absolute bottom-6 left-1/2 -translate-x-1/2 rounded-full border border-primary/30 bg-background/80 backdrop-blur px-4 py-1.5 font-mono text-xs text-primary pointer-events-none">
-              Click map to place {teams[selectedTeamIdx]?.name}'s drop
+          {addingTeam && (
+            <div className="mb-3 rounded-lg border border-primary/30 bg-primary/5 p-2.5 flex flex-col gap-2">
+              <div className="relative">
+                <Input
+                  value={teamSearch}
+                  onChange={(e) => { setTeamSearch(e.target.value); setNewTeamName(e.target.value); setTeamDropdownOpen(true); }}
+                  onFocus={() => setTeamDropdownOpen(true)}
+                  onBlur={() => setTimeout(() => setTeamDropdownOpen(false), 150)}
+                  placeholder="Search team..."
+                  className="h-10 text-sm"
+                  autoFocus
+                />
+                {teamDropdownOpen && (
+                  <div className="absolute left-0 top-full z-50 mt-1 w-full max-h-64 overflow-y-auto rounded-md border border-white/10 bg-background/95 backdrop-blur-xl shadow-2xl">
+                    {bgmiTeams
+                      .filter((t) => t.name.toLowerCase().includes(teamSearch.toLowerCase()) && teams.filter((a) => a.name === t.name).length < 2)
+                      .map((t) => (
+                        <button
+                          key={t.name}
+                          type="button"
+                          onMouseDown={() => { setNewTeamName(t.name); setTeamSearch(t.name); setTeamDropdownOpen(false); }}
+                          className="flex w-full items-center gap-3 px-3 py-2.5 text-sm hover:bg-accent/60"
+                        >
+                          {t.logo_url && <img src={t.logo_url} alt={t.name} className="h-7 w-7 object-contain shrink-0" />}
+                          <span className="truncate">{t.name}</span>
+                          <span className="ml-auto font-mono text-xs text-muted-foreground">{t.short_name}</span>
+                        </button>
+                      ))}
+                    {bgmiTeams.filter((t) => t.name.toLowerCase().includes(teamSearch.toLowerCase()) && !teams.find((a) => a.name === t.name)).length === 0 && teamSearch && (
+                      <div className="px-2 py-1.5 text-xs text-muted-foreground">No match — will add as custom</div>
+                    )}
+                  </div>
+                )}
+              </div>
+              <div className="flex flex-wrap gap-1">
+                {TEAM_COLORS.map((c) => (
+                  <button
+                    key={c}
+                    onClick={() => setNewTeamColor(c)}
+                    className={`h-5 w-5 rounded-full border-2 transition-transform ${newTeamColor === c ? "border-white scale-110" : "border-transparent"}`}
+                    style={{ backgroundColor: c }}
+                  />
+                ))}
+              </div>
+              <div className="flex gap-1">
+                <Button size="sm" className="h-6 flex-1 text-[11px]" onClick={addTeam}>Add</Button>
+                <Button size="sm" variant="ghost" className="h-6 text-[11px]" onClick={() => { setAddingTeam(false); setNewTeamName(""); setTeamSearch(""); }}>Cancel</Button>
+              </div>
             </div>
           )}
-        </div>
 
-        {/* Side panel */}
-        <div className="flex w-64 shrink-0 flex-col border-l border-border bg-card/80 backdrop-blur p-4 gap-4 overflow-y-auto">
-          {/* Teams */}
-          <div className="flex-1">
-            <div className="flex items-center justify-between mb-3">
-              <span className="font-mono text-sm uppercase tracking-widest font-bold text-primary">Teams</span>
-              <button
-                onClick={() => { setAddingTeam(true); setTeamSearch(""); setNewTeamName(""); }}
-                className="group flex items-center gap-1 overflow-hidden rounded-full border-2 border-pink-400/70 bg-gradient-to-r from-purple-400/30 to-pink-400/30 px-1.5 py-0.5 text-pink-300 transition-all duration-300 hover:from-purple-400/50 hover:to-pink-400/50 hover:border-pink-300 hover:text-pink-200 hover:shadow-[0_0_12px_rgba(236,72,153,0.5)]"
+          <div className="flex flex-col gap-1">
+            {teams.map((team, i) => (
+              <div
+                key={i}
+                onClick={() => setSelectedTeamIdx(i === selectedTeamIdx ? null : i)}
+                className={`flex items-center gap-3 rounded-lg px-3 py-3 cursor-pointer transition-all border ${
+                  selectedTeamIdx === i ? "bg-primary/15 border-primary/40" : "hover:bg-accent/50 border-transparent"
+                }`}
               >
-                <span className="max-w-0 overflow-hidden whitespace-nowrap font-mono text-xs font-bold tracking-wider opacity-0 transition-all duration-300 group-hover:max-w-[2rem] group-hover:opacity-100">Add</span>
-                <Plus className="h-3.5 w-3.5 transition-transform duration-300 group-hover:rotate-90" />
-              </button>
-            </div>
-
-            {addingTeam && (
-              <div className="mb-3 rounded-lg border border-primary/30 bg-primary/5 p-2.5 flex flex-col gap-2">
-                {/* Searchable team picker */}
-                <div className="relative">
-                  <Input
-                    value={teamSearch}
-                    onChange={(e) => { setTeamSearch(e.target.value); setNewTeamName(e.target.value); setTeamDropdownOpen(true); }}
-                    onFocus={() => setTeamDropdownOpen(true)}
-                    onBlur={() => setTimeout(() => setTeamDropdownOpen(false), 150)}
-                    placeholder="Search team..."
-                    className="h-10 text-sm"
-                    autoFocus
-                  />
-                  {teamDropdownOpen && (
-                    <div className="absolute left-0 top-full z-50 mt-1 w-full max-h-64 overflow-y-auto rounded-md border border-white/10 bg-background/95 backdrop-blur-xl shadow-2xl">
-                      {bgmiTeams
-                        .filter((t) => t.name.toLowerCase().includes(teamSearch.toLowerCase()) && teams.filter((a) => a.name === t.name).length < 2)
-                        .map((t) => (
-                          <button
-                            key={t.name}
-                            type="button"
-                            onMouseDown={() => { setNewTeamName(t.name); setTeamSearch(t.name); setTeamDropdownOpen(false); }}
-                            className="flex w-full items-center gap-3 px-3 py-2.5 text-sm hover:bg-accent/60"
-                          >
-                            {t.logo_url && <img src={t.logo_url} alt={t.name} className="h-7 w-7 object-contain shrink-0" />}
-                            <span className="truncate">{t.name}</span>
-                            <span className="ml-auto font-mono text-xs text-muted-foreground">{t.short_name}</span>
-                          </button>
-                        ))}
-                      {bgmiTeams.filter((t) => t.name.toLowerCase().includes(teamSearch.toLowerCase()) && !teams.find((a) => a.name === t.name)).length === 0 && teamSearch && (
-                        <div className="px-2 py-1.5 text-xs text-muted-foreground">No match — will add as custom</div>
-                      )}
-                    </div>
-                  )}
-                </div>
-                <div className="flex flex-wrap gap-1">
-                  {TEAM_COLORS.map((c) => (
-                    <button
-                      key={c}
-                      onClick={() => setNewTeamColor(c)}
-                      className={`h-5 w-5 rounded-full border-2 transition-transform ${newTeamColor === c ? "border-white scale-110" : "border-transparent"}`}
-                      style={{ backgroundColor: c }}
-                    />
-                  ))}
-                </div>
-                <div className="flex gap-1">
-                  <Button size="sm" className="h-6 flex-1 text-[11px]" onClick={addTeam}>Add</Button>
-                  <Button size="sm" variant="ghost" className="h-6 text-[11px]" onClick={() => { setAddingTeam(false); setNewTeamName(""); setTeamSearch(""); }}>Cancel</Button>
-                </div>
-              </div>
-            )}
-
-            <div className="flex flex-col gap-1">
-              {teams.map((team, i) => (
-                <div
-                  key={i}
-                  onClick={() => setSelectedTeamIdx(i === selectedTeamIdx ? null : i)}
-                  className={`flex items-center gap-3 rounded-lg px-3 py-3 cursor-pointer transition-all border ${
-                    selectedTeamIdx === i
-                      ? "bg-primary/15 border-primary/40"
-                      : "hover:bg-accent/50 border-transparent"
-                  }`}
+                {(() => { const logo = bgmiTeams.find(t => t.name === team.name)?.logo_url; return logo
+                  ? <img src={logo} alt={team.name} className="h-6 w-6 object-contain shrink-0" />
+                  : <div className="h-4 w-4 rounded-full shrink-0 border border-white/20" style={{ backgroundColor: team.color }} />;
+                })()}
+                <span className="flex-1 text-sm truncate">{team.name}</span>
+                {pins.find((p) => p.teamIdx === i) && (
+                  <MapPin className="h-3.5 w-3.5 text-primary shrink-0" />
+                )}
+                <button
+                  onClick={(e) => { e.stopPropagation(); removeTeam(i); }}
+                  className="text-muted-foreground hover:text-destructive shrink-0 transition-colors"
                 >
-                  {(() => { const logo = bgmiTeams.find(t => t.name === team.name)?.logo_url; return logo
-                    ? <img src={logo} alt={team.name} className="h-6 w-6 object-contain shrink-0" />
-                    : <div className="h-4 w-4 rounded-full shrink-0 border border-white/20" style={{ backgroundColor: team.color }} />;
-                  })()}
-                  <span className="flex-1 text-sm truncate">{team.name}</span>
-                  {pins.find((p) => p.teamIdx === i) && (
-                    <MapPin className="h-3.5 w-3.5 text-primary shrink-0" />
-                  )}
-                  <button
-                    onClick={(e) => { e.stopPropagation(); removeTeam(i); }}
-                    className="text-muted-foreground hover:text-destructive shrink-0 transition-colors"
-                  >
-                    <X className="h-3.5 w-3.5" />
-                  </button>
-                </div>
-              ))}
-              {teams.length === 0 && !addingTeam && (
-                <p className="text-xs text-muted-foreground text-center py-4">
-                  Add teams to start marking drops
-                </p>
-              )}
-            </div>
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            ))}
+            {teams.length === 0 && !addingTeam && (
+              <p className="text-xs text-muted-foreground text-center py-4">Add teams to start marking drops</p>
+            )}
           </div>
-
         </div>
       </div>
+
+      {/* Hint text */}
+      {selectedTeamIdx !== null && (
+        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-10 rounded-full border border-primary/30 bg-background/80 backdrop-blur px-4 py-1.5 font-mono text-xs text-primary pointer-events-none">
+          Click map to place {teams[selectedTeamIdx]?.name}'s drop
+        </div>
+      )}
 
       {/* Save dialog */}
       {saveDialogOpen && (
