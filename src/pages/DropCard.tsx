@@ -430,7 +430,7 @@ export function DropCard() {
                     saveDropCard();
                   }}
                 />
-                {dropDupeError && <p className="mt-1.5 text-xs text-destructive">Name already exists</p>}
+                {dropDupeError && <p key={Date.now()} className="reveal-ltr mt-1.5 text-xs text-destructive">Name already exists</p>}
               </div>
               <div className="flex gap-2 pt-1">
                 <Button

@@ -547,7 +547,7 @@ export function BoardEditor({ map, initial }: Props) {
               setRenameDialogOpen(false); handleSave();
             }}
           />
-          {renameDupeError && <p className="mt-1.5 text-xs text-destructive">Name already exists</p>}
+          {renameDupeError && <p key={Date.now()} className="reveal-ltr mt-1.5 text-xs text-destructive">Name already exists</p>}
           <div className="flex gap-2 mt-4">
             <Button
               className="flex-1"
