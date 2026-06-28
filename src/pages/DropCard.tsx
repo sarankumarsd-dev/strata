@@ -13,6 +13,7 @@ import type { BgmiMap } from "@/lib/maps";
 interface DropPin {
   id: string;
   teamName: string;
+  teamIdx: number;
   color: string;
   x: number;
   y: number;
@@ -95,8 +96,8 @@ export function DropCard() {
     const y = (rawY - pan.y) / (zoom * rect.height);
     const team = teams[selectedTeamIdx];
     setPins((prev) => [
-      ...prev.filter((p) => p.teamName !== team.name),
-      { id: crypto.randomUUID(), teamName: team.name, color: team.color, x, y },
+      ...prev.filter((p) => p.teamIdx !== selectedTeamIdx),
+      { id: crypto.randomUUID(), teamName: team.name, teamIdx: selectedTeamIdx, color: team.color, x, y },
     ]);
   }
 
@@ -111,9 +112,8 @@ export function DropCard() {
   }
 
   function removeTeam(i: number) {
-    const teamName = teams[i].name;
     setTeams((prev) => prev.filter((_, idx) => idx !== i));
-    setPins((prev) => prev.filter((p) => p.teamName !== teamName));
+    setPins((prev) => prev.filter((p) => p.teamIdx !== i).map((p) => ({ ...p, teamIdx: p.teamIdx > i ? p.teamIdx - 1 : p.teamIdx })));
     if (selectedTeamIdx === i) setSelectedTeamIdx(null);
     else if (selectedTeamIdx !== null && selectedTeamIdx > i) setSelectedTeamIdx(selectedTeamIdx - 1);
   }
@@ -211,26 +211,19 @@ export function DropCard() {
                 className="absolute group"
                 style={{ left: `${pin.x * 100}%`, top: `${pin.y * 100}%`, transform: `translate(-50%, -100%) scale(${1 / zoom})`, transformOrigin: "bottom center" }}
               >
-                <div className="relative flex flex-col items-center">
-                  <div
-                    className="h-5 w-5 rounded-full border-2 border-white shadow-lg"
-                    style={{ backgroundColor: pin.color }}
-                    title={pin.teamName}
-                  />
-                  <div className="mt-0.5 rounded bg-black/70 px-1 py-0.5 text-[9px] text-white whitespace-nowrap">
-                    {pin.teamName}
-                  </div>
-                  {/* Hover delete */}
+                <div className="relative flex items-center rounded-lg bg-black/80 shadow-lg overflow-hidden">
+                  {(() => { const logo = bgmiTeams.find(t => t.name === pin.teamName)?.logo_url; return logo
+                    ? <img src={logo} alt={pin.teamName} className="h-6 w-6 object-contain shrink-0" />
+                    : <div className="h-6 w-6 rounded-full shrink-0 border-2 border-white/60 m-1" style={{ backgroundColor: pin.color }} />;
+                  })()}
+                  <span className="pr-1.5 text-[10px] font-semibold text-white whitespace-nowrap">{pin.teamName}</span>
+                  <div className="absolute bottom-0 left-0 right-0 h-0.5" style={{ backgroundColor: pin.color }} />
                   <button
                     onClick={(e) => { e.stopPropagation(); removePin(pin.id); }}
                     className="absolute -top-1 -right-1 hidden group-hover:flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-white shadow"
                   >
                     <X className="h-2.5 w-2.5" />
                   </button>
-                  {/* Hover tooltip */}
-                  <div className="absolute bottom-full mb-1 hidden group-hover:block whitespace-nowrap rounded bg-black/80 px-1.5 py-0.5 text-[10px] text-white">
-                    {pin.teamName}
-                  </div>
                 </div>
               </div>
             ))}
@@ -316,23 +309,23 @@ export function DropCard() {
                     onFocus={() => setTeamDropdownOpen(true)}
                     onBlur={() => setTimeout(() => setTeamDropdownOpen(false), 150)}
                     placeholder="Search team..."
-                    className="h-7 text-xs"
+                    className="h-10 text-sm"
                     autoFocus
                   />
                   {teamDropdownOpen && (
-                    <div className="absolute left-0 top-full z-50 mt-1 w-full max-h-48 overflow-y-auto rounded-md border border-white/10 bg-background/95 backdrop-blur-xl shadow-2xl">
+                    <div className="absolute left-0 top-full z-50 mt-1 w-full max-h-64 overflow-y-auto rounded-md border border-white/10 bg-background/95 backdrop-blur-xl shadow-2xl">
                       {bgmiTeams
-                        .filter((t) => t.name.toLowerCase().includes(teamSearch.toLowerCase()) && !teams.find((a) => a.name === t.name))
+                        .filter((t) => t.name.toLowerCase().includes(teamSearch.toLowerCase()) && teams.filter((a) => a.name === t.name).length < 2)
                         .map((t) => (
                           <button
                             key={t.name}
                             type="button"
                             onMouseDown={() => { setNewTeamName(t.name); setTeamSearch(t.name); setTeamDropdownOpen(false); }}
-                            className="flex w-full items-center gap-2 px-2 py-1.5 text-xs hover:bg-accent/60"
+                            className="flex w-full items-center gap-3 px-3 py-2.5 text-sm hover:bg-accent/60"
                           >
-                            {t.logo_url && <img src={t.logo_url} alt={t.name} className="h-5 w-5 object-contain shrink-0" />}
+                            {t.logo_url && <img src={t.logo_url} alt={t.name} className="h-7 w-7 object-contain shrink-0" />}
                             <span className="truncate">{t.name}</span>
-                            <span className="ml-auto font-mono text-[10px] text-muted-foreground">{t.short_name}</span>
+                            <span className="ml-auto font-mono text-xs text-muted-foreground">{t.short_name}</span>
                           </button>
                         ))}
                       {bgmiTeams.filter((t) => t.name.toLowerCase().includes(teamSearch.toLowerCase()) && !teams.find((a) => a.name === t.name)).length === 0 && teamSearch && (
@@ -363,25 +356,25 @@ export function DropCard() {
                 <div
                   key={i}
                   onClick={() => setSelectedTeamIdx(i === selectedTeamIdx ? null : i)}
-                  className={`flex items-center gap-2 rounded-lg px-2 py-2 cursor-pointer transition-all border ${
+                  className={`flex items-center gap-3 rounded-lg px-3 py-3 cursor-pointer transition-all border ${
                     selectedTeamIdx === i
                       ? "bg-primary/15 border-primary/40"
                       : "hover:bg-accent/50 border-transparent"
                   }`}
                 >
-                  <div
-                    className="h-3.5 w-3.5 rounded-full shrink-0 border border-white/20"
-                    style={{ backgroundColor: team.color }}
-                  />
-                  <span className="flex-1 text-xs truncate">{team.name}</span>
-                  {pins.find((p) => p.teamName === team.name) && (
-                    <MapPin className="h-3 w-3 text-primary shrink-0" />
+                  {(() => { const logo = bgmiTeams.find(t => t.name === team.name)?.logo_url; return logo
+                    ? <img src={logo} alt={team.name} className="h-6 w-6 object-contain shrink-0" />
+                    : <div className="h-4 w-4 rounded-full shrink-0 border border-white/20" style={{ backgroundColor: team.color }} />;
+                  })()}
+                  <span className="flex-1 text-sm truncate">{team.name}</span>
+                  {pins.find((p) => p.teamIdx === i) && (
+                    <MapPin className="h-3.5 w-3.5 text-primary shrink-0" />
                   )}
                   <button
                     onClick={(e) => { e.stopPropagation(); removeTeam(i); }}
                     className="text-muted-foreground hover:text-destructive shrink-0 transition-colors"
                   >
-                    <X className="h-3 w-3" />
+                    <X className="h-3.5 w-3.5" />
                   </button>
                 </div>
               ))}
