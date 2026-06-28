@@ -219,12 +219,12 @@
 
 /* Card: green glow on hover */
 .drop-card:hover {
-  border-color: rgba(34, 197, 94, 0.5);
-  box-shadow: 0 0 18px rgba(34, 197, 94, 0.25);
+  border-color: rgba(34, 197, 94, 0.7);
+  box-shadow: 0 0 24px rgba(34, 197, 94, 0.45), 0 0 8px rgba(34, 197, 94, 0.3);
 }
 
 /* Card: switch to red glow when delete button is hovered */
 .drop-card:has(.delete-btn:hover) {
-  border-color: rgba(239, 68, 68, 0.55);
-  box-shadow: 0 0 18px rgba(239, 68, 68, 0.25);
+  border-color: rgba(239, 68, 68, 0.7);
+  box-shadow: 0 0 24px rgba(239, 68, 68, 0.45), 0 0 8px rgba(239, 68, 68, 0.3);
 }
