@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, ArrowRight, Plus, Save, X, MapPin } from "lucide-react";
+import { ArrowLeft, ArrowRight, Plus, Save, X, MapPin, Maximize2, Minus, Plus as PlusIcon } from "lucide-react";
 import { AppHeader } from "@/components/AppHeader";
 import { Button, Input } from "@/components/ui";
 import { MapThumb } from "@/components/board/MapThumb";
@@ -39,10 +39,38 @@ export function DropCard() {
   const [addingTeam, setAddingTeam] = useState(false);
   const [newTeamName, setNewTeamName] = useState("");
   const [newTeamColor, setNewTeamColor] = useState(TEAM_COLORS[0]);
+  const [bgmiTeams, setBgmiTeams] = useState<{ name: string; short_name: string; logo_url: string }[]>([]);
+  const [teamSearch, setTeamSearch] = useState("");
+  const [teamDropdownOpen, setTeamDropdownOpen] = useState(false);
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [saving, setSaving] = useState(false);
   const mapRef = useRef<HTMLDivElement>(null);
+  const [zoom, setZoom] = useState(1);
+  const [pan, setPan] = useState({ x: 0, y: 0 });
+  const [zoomPos, setZoomPos] = useState<{ x: number; y: number } | null>(null);
+  const zoomDragRef = useRef<{ startX: number; startY: number; origX: number; origY: number } | null>(null);
+
+  const MAX_ZOOM = 16;
+  function clampZoom(z: number) { return Math.min(MAX_ZOOM, Math.max(1, z)); }
+  function clampPan(x: number, y: number, z: number) {
+    const maxX = 0, minX = -(z - 1) * (mapRef.current?.clientWidth ?? 0);
+    const maxY = 0, minY = -(z - 1) * (mapRef.current?.clientHeight ?? 0);
+    return { x: Math.min(maxX, Math.max(minX, x)), y: Math.min(maxY, Math.max(minY, y)) };
+  }
+  function zoomAround(cx: number, cy: number, newZ: number) {
+    const z = clampZoom(newZ);
+    const wx = (cx - pan.x) / zoom;
+    const wy = (cy - pan.y) / zoom;
+    setPan(clampPan(cx - wx * z, cy - wy * z, z));
+    setZoom(z);
+  }
+  function resetView() { setZoom(1); setPan({ x: 0, y: 0 }); }
+
+  useEffect(() => {
+    supabase.from("bgmi_teams").select("name, short_name, logo_url").order("name")
+      .then(({ data }) => { if (data) setBgmiTeams(data); });
+  }, []);
 
   useEffect(() => {
     if (!dropId) return;
@@ -61,8 +89,10 @@ export function DropCard() {
   function handleMapClick(e: React.MouseEvent<HTMLDivElement>) {
     if (selectedTeamIdx === null || !mapRef.current) return;
     const rect = mapRef.current.getBoundingClientRect();
-    const x = (e.clientX - rect.left) / rect.width;
-    const y = (e.clientY - rect.top) / rect.height;
+    const rawX = e.clientX - rect.left;
+    const rawY = e.clientY - rect.top;
+    const x = (rawX - pan.x) / (zoom * rect.width);
+    const y = (rawY - pan.y) / (zoom * rect.height);
     const team = teams[selectedTeamIdx];
     setPins((prev) => [
       ...prev.filter((p) => p.teamName !== team.name),
@@ -163,16 +193,23 @@ export function DropCard() {
           <div
             ref={mapRef}
             onClick={handleMapClick}
+            onWheel={(e) => {
+              e.preventDefault();
+              const rect = mapRef.current!.getBoundingClientRect();
+              zoomAround(e.clientX - rect.left, e.clientY - rect.top, zoom * (e.deltaY < 0 ? 1.15 : 1 / 1.15));
+            }}
             className={`relative overflow-hidden rounded-xl border border-border ${selectedTeamIdx !== null ? "cursor-crosshair" : "cursor-default"}`}
             style={{ width: "min(100%, calc(100vh - 140px))", aspectRatio: "1 / 1" }}
           >
+            {/* Zoomable inner layer */}
+            <div style={{ position: "absolute", inset: 0, transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`, transformOrigin: "0 0" }}>
             <MapThumb map={mapInfo} />
             {/* Pins */}
             {pins.map((pin) => (
               <div
                 key={pin.id}
                 className="absolute group"
-                style={{ left: `${pin.x * 100}%`, top: `${pin.y * 100}%`, transform: "translate(-50%, -100%)" }}
+                style={{ left: `${pin.x * 100}%`, top: `${pin.y * 100}%`, transform: `translate(-50%, -100%) scale(${1 / zoom})`, transformOrigin: "bottom center" }}
               >
                 <div className="relative flex flex-col items-center">
                   <div
@@ -197,6 +234,46 @@ export function DropCard() {
                 </div>
               </div>
             ))}
+            </div>{/* end zoomable layer */}
+
+            {/* Zoom controls */}
+            <div
+              className="absolute z-10 flex flex-col gap-1 rounded-md border border-white/10 bg-transparent backdrop-blur-xl p-1 shadow-2xl cursor-grab active:cursor-grabbing"
+              style={zoomPos ? { left: zoomPos.x, top: zoomPos.y, bottom: "auto" } : { bottom: 12, left: 12 }}
+              onMouseDown={(e) => {
+                e.stopPropagation();
+                const el = e.currentTarget;
+                const rect = el.getBoundingClientRect();
+                const parent = el.parentElement!.getBoundingClientRect();
+                zoomDragRef.current = { startX: e.clientX, startY: e.clientY, origX: rect.left - parent.left, origY: rect.top - parent.top };
+                function onMove(ev: MouseEvent) {
+                  if (!zoomDragRef.current) return;
+                  setZoomPos({ x: zoomDragRef.current.origX + (ev.clientX - zoomDragRef.current.startX), y: zoomDragRef.current.origY + (ev.clientY - zoomDragRef.current.startY) });
+                }
+                function onUp() { zoomDragRef.current = null; window.removeEventListener("mousemove", onMove); window.removeEventListener("mouseup", onUp); }
+                window.addEventListener("mousemove", onMove);
+                window.addEventListener("mouseup", onUp);
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <button type="button" aria-label="Zoom in" className="grid h-7 w-7 place-items-center rounded hover:bg-accent text-foreground"
+                onClick={() => { const r = mapRef.current!.getBoundingClientRect(); zoomAround(r.width / 2, r.height / 2, zoom * 1.25); }}>
+                <PlusIcon className="h-3.5 w-3.5" />
+              </button>
+              <button type="button" aria-label="Zoom out" className="grid h-7 w-7 place-items-center rounded hover:bg-accent text-foreground"
+                onClick={() => { const r = mapRef.current!.getBoundingClientRect(); zoomAround(r.width / 2, r.height / 2, zoom / 1.25); }}>
+                <Minus className="h-3.5 w-3.5" />
+              </button>
+              <button type="button" aria-label="Reset view" className="grid h-7 w-7 place-items-center rounded hover:bg-accent text-foreground"
+                onClick={resetView}>
+                <Maximize2 className="h-3.5 w-3.5" />
+              </button>
+            </div>
+            {zoom > 1.001 && (
+              <div className="absolute top-3 right-3 z-10 rounded-md border border-white/10 bg-transparent backdrop-blur-xl px-2 py-1 font-mono text-xs text-primary shadow-2xl pointer-events-none">
+                {zoom.toFixed(1)}×
+              </div>
+            )}
           </div>
 
           {selectedTeamIdx !== null && (
@@ -210,8 +287,8 @@ export function DropCard() {
         <div className="flex w-64 shrink-0 flex-col border-l border-border bg-card/80 backdrop-blur p-4 gap-4 overflow-y-auto">
           {/* Map label */}
           <div>
-            <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">Map</div>
-            <div className="mt-1 font-heading font-semibold text-sm">{mapInfo.name}</div>
+            <div className="font-mono text-sm uppercase tracking-widest font-bold text-primary">Map</div>
+            <div className="mt-1 font-heading font-bold text-base">{mapInfo.name}</div>
           </div>
 
           <div className="border-t border-border" />
@@ -219,26 +296,51 @@ export function DropCard() {
           {/* Teams */}
           <div className="flex-1">
             <div className="flex items-center justify-between mb-3">
-              <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">Teams</span>
+              <span className="font-mono text-sm uppercase tracking-widest font-bold text-primary">Teams</span>
               <button
-                onClick={() => setAddingTeam(true)}
-                className="text-primary hover:text-primary/80 transition-colors"
-                title="Add team"
+                onClick={() => { setAddingTeam(true); setTeamSearch(""); setNewTeamName(""); }}
+                className="group flex items-center gap-1 overflow-hidden rounded-full border-2 border-pink-400/70 bg-gradient-to-r from-purple-400/30 to-pink-400/30 px-1.5 py-0.5 text-pink-300 transition-all duration-300 hover:from-purple-400/50 hover:to-pink-400/50 hover:border-pink-300 hover:text-pink-200 hover:shadow-[0_0_12px_rgba(236,72,153,0.5)]"
               >
-                <Plus className="h-4 w-4" />
+                <span className="max-w-0 overflow-hidden whitespace-nowrap font-mono text-xs font-bold tracking-wider opacity-0 transition-all duration-300 group-hover:max-w-[2rem] group-hover:opacity-100">Add</span>
+                <Plus className="h-3.5 w-3.5 transition-transform duration-300 group-hover:rotate-90" />
               </button>
             </div>
 
             {addingTeam && (
               <div className="mb-3 rounded-lg border border-primary/30 bg-primary/5 p-2.5 flex flex-col gap-2">
-                <Input
-                  value={newTeamName}
-                  onChange={(e) => setNewTeamName(e.target.value)}
-                  placeholder="Team name"
-                  className="h-7 text-xs"
-                  onKeyDown={(e) => e.key === "Enter" && addTeam()}
-                  autoFocus
-                />
+                {/* Searchable team picker */}
+                <div className="relative">
+                  <Input
+                    value={teamSearch}
+                    onChange={(e) => { setTeamSearch(e.target.value); setNewTeamName(e.target.value); setTeamDropdownOpen(true); }}
+                    onFocus={() => setTeamDropdownOpen(true)}
+                    onBlur={() => setTimeout(() => setTeamDropdownOpen(false), 150)}
+                    placeholder="Search team..."
+                    className="h-7 text-xs"
+                    autoFocus
+                  />
+                  {teamDropdownOpen && (
+                    <div className="absolute left-0 top-full z-50 mt-1 w-full max-h-48 overflow-y-auto rounded-md border border-white/10 bg-background/95 backdrop-blur-xl shadow-2xl">
+                      {bgmiTeams
+                        .filter((t) => t.name.toLowerCase().includes(teamSearch.toLowerCase()) && !teams.find((a) => a.name === t.name))
+                        .map((t) => (
+                          <button
+                            key={t.name}
+                            type="button"
+                            onMouseDown={() => { setNewTeamName(t.name); setTeamSearch(t.name); setTeamDropdownOpen(false); }}
+                            className="flex w-full items-center gap-2 px-2 py-1.5 text-xs hover:bg-accent/60"
+                          >
+                            {t.logo_url && <img src={t.logo_url} alt={t.name} className="h-5 w-5 object-contain shrink-0" />}
+                            <span className="truncate">{t.name}</span>
+                            <span className="ml-auto font-mono text-[10px] text-muted-foreground">{t.short_name}</span>
+                          </button>
+                        ))}
+                      {bgmiTeams.filter((t) => t.name.toLowerCase().includes(teamSearch.toLowerCase()) && !teams.find((a) => a.name === t.name)).length === 0 && teamSearch && (
+                        <div className="px-2 py-1.5 text-xs text-muted-foreground">No match — will add as custom</div>
+                      )}
+                    </div>
+                  )}
+                </div>
                 <div className="flex flex-wrap gap-1">
                   {TEAM_COLORS.map((c) => (
                     <button
@@ -251,7 +353,7 @@ export function DropCard() {
                 </div>
                 <div className="flex gap-1">
                   <Button size="sm" className="h-6 flex-1 text-[11px]" onClick={addTeam}>Add</Button>
-                  <Button size="sm" variant="ghost" className="h-6 text-[11px]" onClick={() => { setAddingTeam(false); setNewTeamName(""); }}>Cancel</Button>
+                  <Button size="sm" variant="ghost" className="h-6 text-[11px]" onClick={() => { setAddingTeam(false); setNewTeamName(""); setTeamSearch(""); }}>Cancel</Button>
                 </div>
               </div>
             )}
