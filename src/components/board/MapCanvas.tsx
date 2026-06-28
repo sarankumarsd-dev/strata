@@ -352,27 +352,34 @@ export function MapCanvas(props: Props) {
         </svg>
 
         {/* ===== Drop card pins overlay ===== */}
-        {dropPins?.map((pin) => (
-          <div
-            key={pin.id}
-            className="absolute pointer-events-none"
-            style={{
-              left: `${pin.x * 100}%`,
-              top: `${pin.y * 100}%`,
-              transform: `translate(-50%, -100%) scale(${1 / zoom})`,
-              transformOrigin: "bottom center",
-            }}
-          >
-            <div className="relative flex items-center rounded-lg bg-black/80 shadow-lg overflow-hidden">
-              {pin.logoUrl
-                ? <img src={pin.logoUrl} alt={pin.teamName} className="h-6 w-6 object-contain shrink-0" />
-                : <div className="h-6 w-6 rounded-full shrink-0 border-2 border-white/60 m-1" style={{ backgroundColor: pin.color }} />
-              }
-              <span className="pr-1.5 text-[10px] font-semibold text-white whitespace-nowrap">{pin.teamName}</span>
-              <div className="absolute bottom-0 left-0 right-0 h-0.5" style={{ backgroundColor: pin.color }} />
+        {dropPins && dropPins.length > 0 && (
+          <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", pointerEvents: "none" }}>
+            {/* Square div that matches object-contain positioning of the square map image */}
+            <div style={{ position: "relative", aspectRatio: "1 / 1", width: "100%", maxHeight: "100%" }}>
+              {dropPins.map((pin) => (
+                <div
+                  key={pin.id}
+                  style={{
+                    position: "absolute",
+                    left: `${pin.x * 100}%`,
+                    top: `${pin.y * 100}%`,
+                    transform: `translate(-50%, -100%) scale(${1 / zoom})`,
+                    transformOrigin: "bottom center",
+                  }}
+                >
+                  <div className="relative flex items-center rounded-lg bg-black/80 shadow-lg overflow-hidden">
+                    {pin.logoUrl
+                      ? <img src={pin.logoUrl} alt={pin.teamName} className="h-6 w-6 object-contain shrink-0" />
+                      : <div className="h-6 w-6 rounded-full shrink-0 border-2 border-white/60 m-1" style={{ backgroundColor: pin.color }} />
+                    }
+                    <span className="pr-1.5 text-[10px] font-semibold text-white whitespace-nowrap">{pin.teamName}</span>
+                    <div className="absolute bottom-0 left-0 right-0 h-0.5" style={{ backgroundColor: pin.color }} />
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
-        ))}
+        )}
       </div>
 
       {/* ===== Zoom controls (draggable) ===== */}
