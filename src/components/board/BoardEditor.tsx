@@ -77,6 +77,8 @@ export function BoardEditor({ map, initial }: Props) {
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [renameDialogOpen, setRenameDialogOpen] = useState(false);
   const [shakeSave, setShakeSave] = useState(false);
+  const [shakeRename, setShakeRename] = useState(false);
+  const [renameDupeError, setRenameDupeError] = useState(false);
 
   // Drop card import
   const [dropPins, setDropPins] = useState<DropPin[]>([]);
@@ -529,25 +531,42 @@ export function BoardEditor({ map, initial }: Props) {
           <p className="text-sm text-muted-foreground mb-4">Give it a name before saving.</p>
           <Input
             value={title === "Untitled strategy" ? "" : title}
-            onChange={(e) => setTitle(e.target.value)}
+            onChange={(e) => { setTitle(e.target.value); setRenameDupeError(false); }}
             placeholder="e.g. Pochinki Rush Strat"
             autoFocus
+            className={renameDupeError ? "border-destructive focus-visible:ring-destructive" : ""}
             onKeyDown={(e) => {
-              if (e.key === "Enter" && title.trim() && title.trim() !== "Untitled strategy") {
-                setRenameDialogOpen(false);
-                handleSave();
+              if (e.key !== "Enter") return;
+              const t = title.trim();
+              if (!t || t === "Untitled strategy") return;
+              if (savedStrategies.some((s) => s.title.toLowerCase() === t.toLowerCase())) {
+                setRenameDupeError(true);
+                setShakeRename(true); setTimeout(() => setShakeRename(false), 500);
+                return;
               }
+              setRenameDialogOpen(false); handleSave();
             }}
           />
+          {renameDupeError && <p className="mt-1.5 text-xs text-destructive">Name already exists</p>}
           <div className="flex gap-2 mt-4">
             <Button
               className="flex-1"
               disabled={!title.trim() || title.trim() === "Untitled strategy"}
-              onClick={() => { setRenameDialogOpen(false); handleSave(); }}
+              style={shakeRename ? { animation: "shake 0.4s ease" } : undefined}
+              onClick={() => {
+                const t = title.trim();
+                if (!t || t === "Untitled strategy") return;
+                if (savedStrategies.some((s) => s.title.toLowerCase() === t.toLowerCase())) {
+                  setRenameDupeError(true);
+                  setShakeRename(true); setTimeout(() => setShakeRename(false), 500);
+                  return;
+                }
+                setRenameDialogOpen(false); handleSave();
+              }}
             >
               Save
             </Button>
-            <Button variant="outline" onClick={() => setRenameDialogOpen(false)}>Cancel</Button>
+            <Button variant="outline" onClick={() => { setRenameDialogOpen(false); setRenameDupeError(false); }}>Cancel</Button>
           </div>
         </div>
       </div>

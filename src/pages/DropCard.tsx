@@ -46,6 +46,9 @@ export function DropCard() {
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [saving, setSaving] = useState(false);
+  const [shakeDrop, setShakeDrop] = useState(false);
+  const [dropDupeError, setDropDupeError] = useState(false);
+  const [existingTitles, setExistingTitles] = useState<string[]>([]);
   const mapRef = useRef<HTMLDivElement>(null);
   const pinAreaRef = useRef<HTMLDivElement>(null);
   const [zoom, setZoom] = useState(1);
@@ -73,6 +76,12 @@ export function DropCard() {
     supabase.from("bgmi_teams").select("name, short_name, logo_url").order("name")
       .then(({ data }) => { if (data) setBgmiTeams(data); });
   }, []);
+
+  useEffect(() => {
+    if (!saveDialogOpen || !user || !selectedMap) return;
+    supabase.from("drop_cards").select("title").eq("user_id", user.id).eq("map", selectedMap)
+      .then(({ data }) => { if (data) setExistingTitles(data.map((d) => d.title.toLowerCase())); });
+  }, [saveDialogOpen, user, selectedMap]);
 
   useEffect(() => {
     if (!dropId) return;
@@ -407,17 +416,39 @@ export function DropCard() {
                 <label className="text-sm text-muted-foreground mb-1 block">Title</label>
                 <Input
                   value={title}
-                  onChange={(e) => setTitle(e.target.value)}
+                  onChange={(e) => { setTitle(e.target.value); setDropDupeError(false); }}
                   placeholder="e.g. BGMI Pro League Drops"
                   autoFocus
-                  onKeyDown={(e) => e.key === "Enter" && saveDropCard()}
+                  className={dropDupeError ? "border-destructive focus-visible:ring-destructive" : ""}
+                  onKeyDown={(e) => {
+                    if (e.key !== "Enter") return;
+                    if (!dropId && existingTitles.includes(title.trim().toLowerCase())) {
+                      setDropDupeError(true);
+                      setShakeDrop(true); setTimeout(() => setShakeDrop(false), 500);
+                      return;
+                    }
+                    saveDropCard();
+                  }}
                 />
+                {dropDupeError && <p className="mt-1.5 text-xs text-destructive">Name already exists</p>}
               </div>
               <div className="flex gap-2 pt-1">
-                <Button className="flex-1" onClick={saveDropCard} disabled={!title.trim() || saving}>
+                <Button
+                  className="flex-1"
+                  disabled={!title.trim() || saving}
+                  style={shakeDrop ? { animation: "shake 0.4s ease" } : undefined}
+                  onClick={() => {
+                    if (!dropId && existingTitles.includes(title.trim().toLowerCase())) {
+                      setDropDupeError(true);
+                      setShakeDrop(true); setTimeout(() => setShakeDrop(false), 500);
+                      return;
+                    }
+                    saveDropCard();
+                  }}
+                >
                   {saving ? "Saving…" : "Save"}
                 </Button>
-                <Button variant="outline" onClick={() => setSaveDialogOpen(false)}>Cancel</Button>
+                <Button variant="outline" onClick={() => { setSaveDialogOpen(false); setDropDupeError(false); }}>Cancel</Button>
               </div>
             </div>
           </div>
