@@ -531,7 +531,7 @@ export function BoardEditor({ map, initial }: Props) {
           <p className="text-sm text-muted-foreground mb-4">Give it a name before saving.</p>
           <Input
             value={title === "Untitled strategy" ? "" : title}
-            onChange={(e) => { setTitle(e.target.value); setRenameDupeError(false); }}
+            onChange={(e) => { setTitle(e.target.value || "Untitled strategy"); setRenameDupeError(false); }}
             placeholder="e.g. Pochinki Rush Strat"
             autoFocus
             className={renameDupeError ? "border-destructive focus-visible:ring-destructive" : ""}
@@ -566,7 +566,7 @@ export function BoardEditor({ map, initial }: Props) {
             >
               Save
             </Button>
-            <Button variant="outline" onClick={() => { setRenameDialogOpen(false); setRenameDupeError(false); }}>Cancel</Button>
+            <Button variant="outline" onClick={() => { setRenameDialogOpen(false); setRenameDupeError(false); setTitle("Untitled strategy"); }}>Cancel</Button>
           </div>
         </div>
       </div>

@@ -448,7 +448,7 @@ export function DropCard() {
                 >
                   {saving ? "Saving…" : "Save"}
                 </Button>
-                <Button variant="outline" onClick={() => { setSaveDialogOpen(false); setDropDupeError(false); }}>Cancel</Button>
+                <Button variant="outline" onClick={() => { setSaveDialogOpen(false); setDropDupeError(false); setTitle(""); }}>Cancel</Button>
               </div>
             </div>
           </div>
