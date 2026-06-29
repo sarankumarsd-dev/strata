@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import {
   MousePointer2, Circle as CircleIcon, MapPin, Octagon, Mountain, TrendingDown,
   Crosshair, Route as RouteIcon, Flame, Type as TypeIcon, Undo2, Redo2, Trash2,
-  Save, Eye, Sparkles, PanelRightClose, PanelRightOpen, ArrowLeft, Layers, X,
+  Save, Eye, Sparkles, PanelRightClose, PanelRightOpen, ArrowLeft, Layers, X, Search,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 
@@ -49,6 +49,32 @@ const TOOLS: { id: ToolId; icon: any; label: string; hint: string }[] = [
 // Shared glass panel styling — fully transparent with heavy blur so the map bleeds through.
 const PANEL = "border border-white/10 bg-transparent backdrop-blur-xl shadow-2xl";
 
+function GunCard({ g, selected, onSelect }: { g: import("@/lib/guns").Gun; selected: boolean; onSelect: () => void }) {
+  return (
+    <button
+      onClick={onSelect}
+      className={`group relative w-full overflow-hidden rounded-md transition-all border shrink-0 ${
+        selected ? "border-2 border-primary/80 ring-1 ring-primary/40" : "border border-white/10 hover:border-white/30"
+      }`}
+      style={{ background: "#3a3a3a", aspectRatio: "530 / 185" }}
+    >
+      <img
+        src={g.image}
+        alt={g.name}
+        className={`absolute inset-0 w-full h-full object-cover transition-all duration-300 ${
+          selected ? "drop-shadow-[0_0_12px_rgba(168,85,247,0.9)]" : "group-hover:drop-shadow-[0_0_16px_rgba(255,255,255,0.9)]"
+        }`}
+        style={{ transform: "rotate(345deg) scale(1)" }}
+      />
+      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent pointer-events-none" />
+      <span className="absolute bottom-1.5 left-2 font-semibold text-xs text-white leading-tight drop-shadow-md">{g.name}</span>
+      <span className="absolute bottom-1.5 right-2 font-mono text-[10px] leading-tight" style={{ color: "oklch(0.80 0.16 295)" }}>
+        {g.category} · {g.effectiveRangeM}m
+      </span>
+    </button>
+  );
+}
+
 export function BoardEditor({ map, initial }: Props) {
   const [tool, setTool] = useState<ToolId>("select");
   const [doc, setDoc] = useState<BoardDoc>(initial?.board_json ?? EMPTY_BOARD);
@@ -62,6 +88,7 @@ export function BoardEditor({ map, initial }: Props) {
   // Tool config
   const [zoneRadius, setZoneRadius] = useState(0.22);
   const [gunId, setGunId] = useState("m416");
+  const [gunSearch, setGunSearch] = useState("");
   const [rotationSplit, setRotationSplit] = useState<"none" | "2-2" | "3-1">("2-2");
   const [rushMode, setRushMode] = useState<"split" | "stack">("split");
 
@@ -73,6 +100,44 @@ export function BoardEditor({ map, initial }: Props) {
   const [savedStrategies, setSavedStrategies] = useState<{ id: string; title: string }[]>([]);
   const [searchOpen, setSearchOpen] = useState(false);
   const titleInputRef = useRef<HTMLInputElement>(null);
+  const gunListRef = useRef<HTMLDivElement>(null);
+
+  // Preload all gun images on mount so scroll is instant
+  useEffect(() => {
+    GUNS.forEach((g) => { const img = new Image(); img.src = g.image; });
+  }, []);
+
+  useEffect(() => {
+    const el = gunListRef.current;
+    if (!el) return;
+    let target = el.scrollTop;
+    let current = el.scrollTop;
+    let rafId: number;
+
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      target += e.deltaY * 0.7;
+      target = Math.max(0, Math.min(target, el.scrollHeight - el.clientHeight));
+      const animate = () => {
+        current += (target - current) * 0.09;
+        el.scrollTop = current;
+        if (Math.abs(target - current) > 0.5) {
+          rafId = requestAnimationFrame(animate);
+        } else {
+          el.scrollTop = target;
+          current = target;
+        }
+      };
+      cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(animate);
+    };
+
+    el.addEventListener("wheel", onWheel, { passive: false });
+    return () => {
+      el.removeEventListener("wheel", onWheel);
+      cancelAnimationFrame(rafId);
+    };
+  }, []);
   const [pinned, setPinned] = useState(false);
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [renameDialogOpen, setRenameDialogOpen] = useState(false);
@@ -415,7 +480,7 @@ export function BoardEditor({ map, initial }: Props) {
       <aside
         className={`
           absolute z-20 space-y-5 overflow-y-auto rounded-xl p-4 ${PANEL}
-          right-2 top-[3rem] bottom-14 w-64 md:bottom-2 md:w-72
+          right-0 top-[3rem] bottom-14 w-64 md:bottom-0 md:w-72 md:top-[3rem] md:rounded-r-none
           transition-transform duration-300 ease-in-out
           ${panelOpen ? "translate-x-0" : "translate-x-[110%]"}
         `}
@@ -441,49 +506,55 @@ export function BoardEditor({ map, initial }: Props) {
             {tool === "gun-arrow" && (
               <div className="space-y-1.5">
                 <Label className="text-xs">Weapon</Label>
-                <div className="flex flex-col gap-2 overflow-y-auto max-h-[340px] -mx-4">
-                  {(["AR", "SMG", "DMR", "SR", "LMG", "SG"] as const).map((cat) => {
-                    const categoryGuns = GUNS.filter((g) => g.category === cat);
-                    const labels: Record<string, string> = { AR: "Assault Rifles", SMG: "SMGs", DMR: "Marksman", SR: "Snipers", LMG: "LMGs", SG: "Shotguns" };
-                    return (
-                      <div key={cat} className="flex flex-col gap-1">
-                        <div className="flex items-center gap-2 px-1">
-                          <span className="font-mono text-[9px] uppercase tracking-widest text-primary font-bold">{labels[cat]}</span>
-                          <div className="flex-1 h-px bg-white/10" />
+                {/* Search */}
+                <div className="relative -mx-4">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground pointer-events-none" />
+                  <input
+                    value={gunSearch}
+                    onChange={(e) => setGunSearch(e.target.value)}
+                    placeholder="Search weapon..."
+                    className="w-full bg-white/5 border border-white/15 rounded-md pl-8 pr-7 py-1.5 text-xs text-white placeholder:text-muted-foreground outline-none focus:bg-white/8 focus:border-primary/50 transition-colors"
+                  />
+                  {gunSearch && (
+                    <button onClick={() => setGunSearch("")} className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-white transition-colors">
+                      <X className="h-3 w-3" />
+                    </button>
+                  )}
+                </div>
+                <div ref={gunListRef} className="flex flex-col gap-2 overflow-y-auto max-h-[345px] -mx-4">
+                  {gunSearch.trim() ? (
+                    /* All guns: matches climb to top, rest stay dimmed below */
+                    (() => {
+                      const q = gunSearch.toLowerCase();
+                      const matches = GUNS.filter((g) => g.name.toLowerCase().includes(q) || g.category.toLowerCase().includes(q));
+                      const rest = GUNS.filter((g) => !g.name.toLowerCase().includes(q) && !g.category.toLowerCase().includes(q));
+                      return [...matches, ...rest].map((g) => {
+                        const isMatch = matches.includes(g);
+                        return (
+                          <div key={g.id} className={isMatch ? "gun-climb" : "opacity-30 pointer-events-none"}>
+                            <GunCard g={g} selected={gunId === g.id} onSelect={() => { setGunId(g.id); setGunSearch(""); }} />
+                          </div>
+                        );
+                      });
+                    })()
+                  ) : (
+                    /* Grouped by category */
+                    (["AR", "SMG", "DMR", "SR", "LMG", "SG"] as const).map((cat) => {
+                      const categoryGuns = GUNS.filter((g) => g.category === cat);
+                      const labels: Record<string, string> = { AR: "Assault Rifles", SMG: "SMGs", DMR: "Marksman", SR: "Snipers", LMG: "LMGs", SG: "Shotguns" };
+                      return (
+                        <div key={cat} className="flex flex-col gap-1">
+                          <div className="flex items-center gap-2 px-1">
+                            <span className="font-mono text-[9px] uppercase tracking-widest text-primary font-bold">{labels[cat]}</span>
+                            <div className="flex-1 h-px bg-white/10" />
+                          </div>
+                          {categoryGuns.map((g) => (
+                            <GunCard key={g.id} g={g} selected={gunId === g.id} onSelect={() => setGunId(g.id)} />
+                          ))}
                         </div>
-                        {categoryGuns.map((g) => (
-                          <button
-                            key={g.id}
-                            onClick={() => setGunId(g.id)}
-                            className={`group relative w-full overflow-hidden rounded-md transition-all border shrink-0 ${
-                              gunId === g.id
-                                ? "border-2 border-primary/80 ring-1 ring-primary/40"
-                                : "border border-white/10 hover:border-white/30"
-                            }`}
-                            style={{ background: "#3a3a3a", aspectRatio: "530 / 185" }}
-                          >
-                            <img
-                              src={g.image}
-                              alt={g.name}
-                              className={`absolute inset-0 w-full h-full object-cover transition-all duration-300 ${
-                                gunId === g.id
-                                  ? "drop-shadow-[0_0_12px_rgba(168,85,247,0.9)]"
-                                  : "group-hover:drop-shadow-[0_0_16px_rgba(255,255,255,0.9)]"
-                              }`}
-                              style={{ transform: "rotate(345deg) scale(1)" }}
-                            />
-                            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent pointer-events-none" />
-                            <span className="absolute bottom-1.5 left-2 font-semibold text-xs text-white leading-tight drop-shadow-md">
-                              {g.name}
-                            </span>
-                            <span className="absolute bottom-1.5 right-2 font-mono text-[10px] leading-tight" style={{ color: "oklch(0.80 0.16 295)" }}>
-                              {g.category} · {g.effectiveRangeM}m
-                            </span>
-                          </button>
-                        ))}
-                      </div>
-                    );
-                  })}
+                      );
+                    })
+                  )}
                 </div>
               </div>
             )}
