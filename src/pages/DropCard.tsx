@@ -19,7 +19,11 @@ interface DropPin {
   y: number;
 }
 
-const DROP_COLORS = ["#22c55e", "#f97316"] as const; // green = first, orange = second
+const DROP_COLORS = [
+  "#22c55e", "#f97316", "#ef4444", "#3b82f6",
+  "#eab308", "#8b5cf6", "#ec4899", "#06b6d4",
+  "#ffffff", "#f59e0b",
+];
 
 export function DropCard() {
   const [searchParams] = useSearchParams();
