@@ -441,35 +441,32 @@ export function BoardEditor({ map, initial }: Props) {
             {tool === "gun-arrow" && (
               <div className="space-y-1.5">
                 <Label className="text-xs">Weapon</Label>
-                <div className="flex flex-col gap-0.5 overflow-y-auto max-h-[calc(100vh-160px)] pr-0.5 scrollbar-thin">
+                <div className="flex flex-col gap-1 overflow-y-auto max-h-[55vh]">
                   {GUNS.map((g) => (
                     <button
                       key={g.id}
                       onClick={() => setGunId(g.id)}
-                      className={`group relative w-full overflow-hidden rounded-md transition-all border ${
+                      className={`group relative w-full overflow-hidden rounded-md transition-all border shrink-0 ${
                         gunId === g.id
-                          ? "border-primary/60 ring-1 ring-primary/40"
-                          : "border-white/5 hover:border-white/20"
+                          ? "border-2 border-primary/80 ring-1 ring-primary/40"
+                          : "border border-white/10 hover:border-white/30"
                       }`}
-                      style={{ background: "#3a3a3a" }}
+                      style={{ background: "#3a3a3a", aspectRatio: "1600 / 1096" }}
                     >
                       <img
                         src={g.image}
                         alt={g.name}
-                        className={`w-full h-auto block transition-all duration-300 ${
+                        className={`absolute inset-0 w-full h-full object-contain transition-all duration-300 ${
                           gunId === g.id
-                            ? "drop-shadow-[0_0_10px_rgba(168,85,247,0.9)]"
-                            : "group-hover:drop-shadow-[0_0_14px_rgba(255,255,255,0.8)]"
+                            ? "drop-shadow-[0_0_12px_rgba(168,85,247,0.9)]"
+                            : "group-hover:drop-shadow-[0_0_16px_rgba(255,255,255,0.9)]"
                         }`}
                       />
-                      {/* gradient overlay for text legibility */}
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-transparent to-transparent pointer-events-none" />
-                      {/* name — bottom left */}
-                      <span className="absolute bottom-1 left-2 font-semibold text-[11px] text-white leading-tight drop-shadow-md">
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent pointer-events-none" />
+                      <span className="absolute bottom-1.5 left-2 font-semibold text-xs text-white leading-tight drop-shadow-md">
                         {g.name}
                       </span>
-                      {/* category · range — bottom right */}
-                      <span className="absolute bottom-1 right-2 font-mono text-[9px] leading-tight" style={{ color: "oklch(0.80 0.16 295)" }}>
+                      <span className="absolute bottom-1.5 right-2 font-mono text-[10px] leading-tight" style={{ color: "oklch(0.80 0.16 295)" }}>
                         {g.category} · {g.effectiveRangeM}m
                       </span>
                     </button>
