@@ -456,7 +456,7 @@ export function BoardEditor({ map, initial }: Props) {
                       <img
                         src={g.image}
                         alt={g.name}
-                        className={`absolute inset-0 w-full h-full object-contain transition-all duration-300 ${
+                        className={`absolute inset-0 w-full h-full object-cover transition-all duration-300 ${
                           gunId === g.id
                             ? "drop-shadow-[0_0_12px_rgba(168,85,247,0.9)]"
                             : "group-hover:drop-shadow-[0_0_16px_rgba(255,255,255,0.9)]"
