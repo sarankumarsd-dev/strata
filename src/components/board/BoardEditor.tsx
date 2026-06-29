@@ -441,30 +441,29 @@ export function BoardEditor({ map, initial }: Props) {
             {tool === "gun-arrow" && (
               <div className="space-y-1.5">
                 <Label className="text-xs">Weapon</Label>
-                <div className="flex flex-col gap-0.5 overflow-y-auto max-h-[460px] pr-0.5">
+                <div className="flex flex-col gap-0.5 overflow-y-auto max-h-[calc(100vh-160px)] pr-0.5 scrollbar-thin">
                   {GUNS.map((g) => (
                     <button
                       key={g.id}
                       onClick={() => setGunId(g.id)}
-                      className={`group relative w-full h-14 overflow-hidden rounded-md transition-all border ${
+                      className={`group relative w-full overflow-hidden rounded-md transition-all border ${
                         gunId === g.id
                           ? "border-primary/60 ring-1 ring-primary/40"
                           : "border-white/5 hover:border-white/20"
                       }`}
                       style={{ background: "#3a3a3a" }}
                     >
-                      {/* gun image — fills card edge to edge */}
                       <img
                         src={g.image}
                         alt={g.name}
-                        className={`absolute inset-0 w-full h-full object-contain scale-[1.05] transition-all duration-300 ${
+                        className={`w-full h-auto block transition-all duration-300 ${
                           gunId === g.id
                             ? "drop-shadow-[0_0_10px_rgba(168,85,247,0.9)]"
                             : "group-hover:drop-shadow-[0_0_14px_rgba(255,255,255,0.8)]"
                         }`}
                       />
                       {/* gradient overlay for text legibility */}
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-transparent to-transparent" />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-transparent to-transparent pointer-events-none" />
                       {/* name — bottom left */}
                       <span className="absolute bottom-1 left-2 font-semibold text-[11px] text-white leading-tight drop-shadow-md">
                         {g.name}
