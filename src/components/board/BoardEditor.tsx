@@ -461,7 +461,7 @@ export function BoardEditor({ map, initial }: Props) {
                             ? "drop-shadow-[0_0_12px_rgba(168,85,247,0.9)]"
                             : "group-hover:drop-shadow-[0_0_16px_rgba(255,255,255,0.9)]"
                         }`}
-                        style={{ transform: "rotate(320deg) scale(2.5)" }}
+                        style={{ transform: "rotate(340deg) scale(2.5)" }}
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent pointer-events-none" />
                       <span className="absolute bottom-1.5 left-2 font-semibold text-xs text-white leading-tight drop-shadow-md">
