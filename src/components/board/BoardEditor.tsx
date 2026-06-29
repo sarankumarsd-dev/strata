@@ -441,32 +441,41 @@ export function BoardEditor({ map, initial }: Props) {
             {tool === "gun-arrow" && (
               <div className="space-y-2">
                 <Label className="text-xs">Weapon</Label>
-                <div className="rounded-lg border border-white/10 bg-black/40 p-2 flex flex-col gap-0.5 max-h-64 overflow-y-auto">
+                <div className="rounded-lg border border-white/10 bg-black/40 flex flex-col gap-px overflow-y-auto max-h-[420px]">
                   {GUNS.map((g) => (
                     <button
                       key={g.id}
                       onClick={() => setGunId(g.id)}
-                      className={`flex items-center gap-2 rounded-md px-2 py-1.5 text-left transition-all ${
+                      className={`relative w-full overflow-hidden rounded-md transition-all ${
                         gunId === g.id
-                          ? "bg-primary/20 border border-primary/50"
-                          : "border border-transparent hover:bg-white/5"
+                          ? "ring-1 ring-primary/70 bg-primary/10"
+                          : "hover:bg-white/5"
                       }`}
                     >
                       {g.image ? (
-                        <img
-                          src={g.image}
-                          alt={g.name}
-                          className="h-7 w-16 object-contain shrink-0 drop-shadow-[0_0_4px_rgba(255,255,255,0.6)] brightness-125"
-                        />
+                        <div className="relative h-14 w-full bg-black/60">
+                          <img
+                            src={g.image}
+                            alt={g.name}
+                            className="absolute inset-0 w-full h-full object-contain scale-[1.15] brightness-[1.4] drop-shadow-[0_0_8px_rgba(255,255,255,0.5)]"
+                            style={{ transform: "scaleX(-1) rotate(-8deg) scale(1.2)" }}
+                          />
+                          {/* details overlay bottom-right */}
+                          <div className="absolute bottom-0 right-0 flex items-center gap-1.5 px-2 py-0.5 bg-black/60 backdrop-blur-sm rounded-tl-md">
+                            <span className="font-semibold text-[11px] text-white leading-tight">{g.name}</span>
+                            <span className="font-mono text-[9px] text-primary/80">{g.category}</span>
+                            <span className="font-mono text-[9px] text-muted-foreground">{g.effectiveRangeM}m</span>
+                          </div>
+                        </div>
                       ) : (
-                        <div className="h-7 w-16 shrink-0 flex items-center justify-center">
-                          <span className="font-mono text-[9px] text-muted-foreground uppercase tracking-widest">{g.category}</span>
+                        <div className="h-10 w-full flex items-center justify-between px-3 bg-black/30">
+                          <span className="text-xs font-semibold text-white">{g.name}</span>
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-mono text-[9px] text-primary/80">{g.category}</span>
+                            <span className="font-mono text-[9px] text-muted-foreground">{g.effectiveRangeM}m</span>
+                          </div>
                         </div>
                       )}
-                      <div className="flex flex-col min-w-0">
-                        <span className="text-xs font-semibold leading-tight truncate">{g.name}</span>
-                        <span className="font-mono text-[9px] text-muted-foreground">{g.category} · {g.effectiveRangeM}m</span>
-                      </div>
                     </button>
                   ))}
                 </div>
