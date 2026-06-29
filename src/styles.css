@@ -236,3 +236,9 @@
 .reveal-ltr {
   animation: reveal-ltr 0.4s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
+
+/* Transparent scrollbar — thumb only, no track */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 999px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.25); }
