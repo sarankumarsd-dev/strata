@@ -439,43 +439,40 @@ export function BoardEditor({ map, initial }: Props) {
               </div>
             )}
             {tool === "gun-arrow" && (
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 <Label className="text-xs">Weapon</Label>
-                <div className="rounded-lg border border-white/10 bg-black/40 flex flex-col gap-px overflow-y-auto max-h-[420px]">
+                <div className="flex flex-col gap-0.5 overflow-y-auto max-h-[460px] pr-0.5">
                   {GUNS.map((g) => (
                     <button
                       key={g.id}
                       onClick={() => setGunId(g.id)}
-                      className={`relative w-full overflow-hidden rounded-md transition-all ${
+                      className={`group relative w-full h-14 overflow-hidden rounded-md transition-all border ${
                         gunId === g.id
-                          ? "ring-1 ring-primary/70 bg-primary/10"
-                          : "hover:bg-white/5"
+                          ? "border-primary/60 ring-1 ring-primary/40"
+                          : "border-white/5 hover:border-white/20"
                       }`}
+                      style={{ background: "linear-gradient(135deg, #1a1a2e 0%, #0f0f1a 100%)" }}
                     >
-                      {g.image ? (
-                        <div className="relative h-14 w-full bg-black/60">
-                          <img
-                            src={g.image}
-                            alt={g.name}
-                            className="absolute inset-0 w-full h-full object-contain scale-[1.15] brightness-[1.4] drop-shadow-[0_0_8px_rgba(255,255,255,0.5)]"
-                            style={{ transform: "scaleX(-1) rotate(-8deg) scale(1.2)" }}
-                          />
-                          {/* details overlay bottom-right */}
-                          <div className="absolute bottom-0 right-0 flex items-center gap-1.5 px-2 py-0.5 bg-black/60 backdrop-blur-sm rounded-tl-md">
-                            <span className="font-semibold text-[11px] text-white leading-tight">{g.name}</span>
-                            <span className="font-mono text-[9px] text-primary/80">{g.category}</span>
-                            <span className="font-mono text-[9px] text-muted-foreground">{g.effectiveRangeM}m</span>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="h-10 w-full flex items-center justify-between px-3 bg-black/30">
-                          <span className="text-xs font-semibold text-white">{g.name}</span>
-                          <div className="flex items-center gap-1.5">
-                            <span className="font-mono text-[9px] text-primary/80">{g.category}</span>
-                            <span className="font-mono text-[9px] text-muted-foreground">{g.effectiveRangeM}m</span>
-                          </div>
-                        </div>
-                      )}
+                      {/* gun image — fills card, no rotation (already horizontal) */}
+                      <img
+                        src={g.image}
+                        alt={g.name}
+                        className={`absolute inset-0 w-full h-full object-contain px-2 py-1 brightness-110 transition-all duration-300 ${
+                          gunId === g.id
+                            ? "drop-shadow-[0_0_10px_rgba(168,85,247,0.7)] brightness-125"
+                            : "group-hover:drop-shadow-[0_0_12px_rgba(255,255,255,0.6)] group-hover:brightness-130"
+                        }`}
+                      />
+                      {/* dark gradient overlay for text legibility */}
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
+                      {/* name — bottom left */}
+                      <span className="absolute bottom-1 left-2 font-semibold text-[11px] text-white leading-tight drop-shadow-md">
+                        {g.name}
+                      </span>
+                      {/* category · range — bottom right */}
+                      <span className="absolute bottom-1 right-2 font-mono text-[9px] leading-tight" style={{ color: "oklch(0.80 0.16 295)" }}>
+                        {g.category} · {g.effectiveRangeM}m
+                      </span>
                     </button>
                   ))}
                 </div>
