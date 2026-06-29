@@ -1,9 +1,10 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { ArrowRight, Crosshair, MapPin, Mountain, Route as RouteIcon, Sparkles, Target } from "lucide-react";
 
 import { AppHeader } from "@/components/AppHeader";
 import { StrategyCard } from "@/components/StrategyCard";
 import { Button } from "@/components/ui";
+import { useAuth } from "@/lib/auth";
 
 const FEATURES = [
   { icon: Target, title: "God spots & chokes", body: "Mark elevated cover and forced funnels along any zone circle. AI can scan the circle and place them for you.", color: "text-success" },
@@ -21,6 +22,14 @@ const FEATURED = [
 ];
 
 export function Landing() {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+
+  function requireAuth(to: string) {
+    if (user) navigate(to);
+    else navigate("/login");
+  }
+
   return (
     <div className="min-h-screen">
       <AppHeader />
@@ -47,16 +56,12 @@ export function Landing() {
             </div>
             <div className="mt-4 flex flex-wrap gap-3">
               <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground self-center mr-1">Start your strata</div>
-              <Link to="/maps">
-                <Button size="lg" className="gap-2 glow-primary">
-                  Strategy Card <ArrowRight className="h-4 w-4" />
-                </Button>
-              </Link>
-              <Link to="/drop">
-                <Button size="lg" variant="outline" className="gap-2">
-                  <MapPin className="h-4 w-4" /> Drop Card
-                </Button>
-              </Link>
+              <Button size="lg" className="gap-2 glow-primary" onClick={() => requireAuth("/maps")}>
+                Strategy Card <ArrowRight className="h-4 w-4" />
+              </Button>
+              <Button size="lg" variant="outline" className="gap-2" onClick={() => requireAuth("/drop")}>
+                <MapPin className="h-4 w-4" /> Drop Card
+              </Button>
             </div>
           </div>
         </div>

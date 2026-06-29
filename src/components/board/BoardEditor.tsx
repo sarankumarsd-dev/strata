@@ -441,37 +441,49 @@ export function BoardEditor({ map, initial }: Props) {
             {tool === "gun-arrow" && (
               <div className="space-y-1.5">
                 <Label className="text-xs">Weapon</Label>
-                <div className="flex flex-col gap-1 overflow-y-auto max-h-[55vh]">
-                  {GUNS.map((g) => (
-                    <button
-                      key={g.id}
-                      onClick={() => setGunId(g.id)}
-                      className={`group relative w-full overflow-hidden rounded-md transition-all border shrink-0 ${
-                        gunId === g.id
-                          ? "border-2 border-primary/80 ring-1 ring-primary/40"
-                          : "border border-white/10 hover:border-white/30"
-                      }`}
-                      style={{ background: "#3a3a3a", aspectRatio: "530 / 185" }}
-                    >
-                      <img
-                        src={g.image}
-                        alt={g.name}
-                        className={`absolute inset-0 w-full h-full object-cover transition-all duration-300 ${
-                          gunId === g.id
-                            ? "drop-shadow-[0_0_12px_rgba(168,85,247,0.9)]"
-                            : "group-hover:drop-shadow-[0_0_16px_rgba(255,255,255,0.9)]"
-                        }`}
-                        style={{ transform: "rotate(345deg) scale(1)" }}
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent pointer-events-none" />
-                      <span className="absolute bottom-1.5 left-2 font-semibold text-xs text-white leading-tight drop-shadow-md">
-                        {g.name}
-                      </span>
-                      <span className="absolute bottom-1.5 right-2 font-mono text-[10px] leading-tight" style={{ color: "oklch(0.80 0.16 295)" }}>
-                        {g.category} · {g.effectiveRangeM}m
-                      </span>
-                    </button>
-                  ))}
+                <div className="flex flex-col gap-2 overflow-y-auto max-h-[55vh]">
+                  {(["AR", "SMG", "DMR", "SR", "LMG", "SG"] as const).map((cat) => {
+                    const categoryGuns = GUNS.filter((g) => g.category === cat);
+                    const labels: Record<string, string> = { AR: "Assault Rifles", SMG: "SMGs", DMR: "Marksman", SR: "Snipers", LMG: "LMGs", SG: "Shotguns" };
+                    return (
+                      <div key={cat} className="flex flex-col gap-1">
+                        <div className="flex items-center gap-2 px-1">
+                          <span className="font-mono text-[9px] uppercase tracking-widest text-primary font-bold">{labels[cat]}</span>
+                          <div className="flex-1 h-px bg-white/10" />
+                        </div>
+                        {categoryGuns.map((g) => (
+                          <button
+                            key={g.id}
+                            onClick={() => setGunId(g.id)}
+                            className={`group relative w-full overflow-hidden rounded-md transition-all border shrink-0 ${
+                              gunId === g.id
+                                ? "border-2 border-primary/80 ring-1 ring-primary/40"
+                                : "border border-white/10 hover:border-white/30"
+                            }`}
+                            style={{ background: "#3a3a3a", aspectRatio: "530 / 185" }}
+                          >
+                            <img
+                              src={g.image}
+                              alt={g.name}
+                              className={`absolute inset-0 w-full h-full object-cover transition-all duration-300 ${
+                                gunId === g.id
+                                  ? "drop-shadow-[0_0_12px_rgba(168,85,247,0.9)]"
+                                  : "group-hover:drop-shadow-[0_0_16px_rgba(255,255,255,0.9)]"
+                              }`}
+                              style={{ transform: "rotate(345deg) scale(1)" }}
+                            />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent pointer-events-none" />
+                            <span className="absolute bottom-1.5 left-2 font-semibold text-xs text-white leading-tight drop-shadow-md">
+                              {g.name}
+                            </span>
+                            <span className="absolute bottom-1.5 right-2 font-mono text-[10px] leading-tight" style={{ color: "oklch(0.80 0.16 295)" }}>
+                              {g.category} · {g.effectiveRangeM}m
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             )}
