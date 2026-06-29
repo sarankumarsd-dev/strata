@@ -441,7 +441,7 @@ export function BoardEditor({ map, initial }: Props) {
             {tool === "gun-arrow" && (
               <div className="space-y-1.5">
                 <Label className="text-xs">Weapon</Label>
-                <div className="flex flex-col gap-2 overflow-y-auto max-h-[55vh]">
+                <div className="flex flex-col gap-2 overflow-y-auto max-h-[340px]">
                   {(["AR", "SMG", "DMR", "SR", "LMG", "SG"] as const).map((cat) => {
                     const categoryGuns = GUNS.filter((g) => g.category === cat);
                     const labels: Record<string, string> = { AR: "Assault Rifles", SMG: "SMGs", DMR: "Marksman", SR: "Snipers", LMG: "LMGs", SG: "Shotguns" };
