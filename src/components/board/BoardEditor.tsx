@@ -96,7 +96,8 @@ export function BoardEditor({ map, initial }: Props) {
   const { user } = useAuth();
   const [building, setBuilding] = useState<Pt[]>([]);
   const [saving, setSaving] = useState(false);
-  const [panelOpen, setPanelOpen] = useState(false);
+  const [panelOpen, setPanelOpen] = useState(true);
+  const [panelHovered, setPanelHovered] = useState(false);
   const [savedStrategies, setSavedStrategies] = useState<{ id: string; title: string }[]>([]);
   const [searchOpen, setSearchOpen] = useState(false);
   const titleInputRef = useRef<HTMLInputElement>(null);
@@ -138,7 +139,7 @@ export function BoardEditor({ map, initial }: Props) {
       cancelAnimationFrame(rafId);
     };
   }, []);
-  const [pinned, setPinned] = useState(false);
+  const [pinned, setPinned] = useState(true);
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [renameDialogOpen, setRenameDialogOpen] = useState(false);
   const [shakeSave, setShakeSave] = useState(false);
@@ -171,14 +172,14 @@ export function BoardEditor({ map, initial }: Props) {
 
   useEffect(() => {
     if (!user) return;
+    // Load ALL strategies across all maps for global title uniqueness check
     supabase
       .from("strategies")
       .select("id, title")
       .eq("user_id", user.id)
-      .eq("map", map.id)
       .order("updated_at", { ascending: false })
       .then(({ data }) => { if (data) setSavedStrategies(data); });
-  }, [user, map.id]);
+  }, [user]);
 
   useEffect(() => {
     if (!user) return;
@@ -278,6 +279,11 @@ export function BoardEditor({ map, initial }: Props) {
         if (error) throw error;
         toast.success("Strategy updated");
       } else {
+        if (savedStrategies.some((s) => s.title.toLowerCase() === title.trim().toLowerCase())) {
+          toast.error("A strategy with this name already exists", { description: "Use a different name across all maps." });
+          setSaving(false);
+          return;
+        }
         const { error } = await supabase
           .from("strategies")
           .insert({ user_id: user.id, map: map.id, title, description, tags, is_public: isPublic, board_json: doc as any });
@@ -484,12 +490,20 @@ export function BoardEditor({ map, initial }: Props) {
           transition-transform duration-300 ease-in-out
           ${panelOpen ? "translate-x-0" : "translate-x-[110%]"}
         `}
-        onMouseEnter={onPanelMouseEnter}
-        onMouseLeave={onPanelMouseLeave}
+        onMouseEnter={() => { onPanelMouseEnter(); setPanelHovered(true); }}
+        onMouseLeave={() => { onPanelMouseLeave(); setPanelHovered(false); }}
       >
-        {/* Pin / shrink button */}
+        {/* Unpin hint row */}
+        {pinned && panelHovered && (
+          <div className="flex items-center justify-center py-0.5 -mt-1 mb-1 border-b border-white/5">
+            <span className="font-mono text-[9px] uppercase tracking-widest animate-glow-pulse select-none">
+              unpin to close toolbar
+            </span>
+          </div>
+        )}
+        {/* Pin button */}
         <button
-          onClick={() => { setPinned((v) => !v); setPanelOpen(true); }}
+          onClick={() => { setPinned((v) => { const next = !v; if (!next) setPanelOpen(false); return next; }); }}
           className="absolute top-2 right-2 grid h-6 w-6 place-items-center rounded text-muted-foreground hover:text-foreground transition-colors"
           title={pinned ? "Unpin (auto-hide)" : "Pin open"}
         >
