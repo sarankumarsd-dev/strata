@@ -19,11 +19,7 @@ interface DropPin {
   y: number;
 }
 
-const TEAM_COLORS = [
-  "#ef4444", "#f97316", "#eab308", "#22c55e",
-  "#3b82f6", "#8b5cf6", "#ec4899", "#06b6d4",
-  "#14b8a6", "#f59e0b",
-];
+const DROP_COLORS = ["#22c55e", "#f97316"] as const; // green = first, orange = second
 
 export function DropCard() {
   const [searchParams] = useSearchParams();
@@ -39,7 +35,7 @@ export function DropCard() {
   const [selectedTeamIdx, setSelectedTeamIdx] = useState<number | null>(null);
   const [addingTeam, setAddingTeam] = useState(false);
   const [newTeamName, setNewTeamName] = useState("");
-  const [newTeamColor, setNewTeamColor] = useState(TEAM_COLORS[0]);
+  const [colorPickerFor, setColorPickerFor] = useState<number | null>(null);
   const [bgmiTeams, setBgmiTeams] = useState<{ name: string; short_name: string; logo_url: string }[]>([]);
   const [teamSearch, setTeamSearch] = useState("");
   const [teamDropdownOpen, setTeamDropdownOpen] = useState(false);
@@ -113,11 +109,12 @@ export function DropCard() {
 
   function addTeam() {
     if (!newTeamName.trim()) return;
-    const newTeam = { name: newTeamName.trim(), color: newTeamColor };
-    setTeams((prev) => [...prev, newTeam]);
+    const name = newTeamName.trim();
+    const existingCount = teams.filter((t) => t.name === name).length;
+    const color = DROP_COLORS[existingCount] ?? DROP_COLORS[1];
+    setTeams((prev) => [...prev, { name, color }]);
     setSelectedTeamIdx(teams.length);
     setNewTeamName("");
-    setNewTeamColor(TEAM_COLORS[(teams.length + 1) % TEAM_COLORS.length]);
     setAddingTeam(false);
   }
 
@@ -349,16 +346,6 @@ export function DropCard() {
                   </div>
                 )}
               </div>
-              <div className="flex flex-wrap gap-1">
-                {TEAM_COLORS.map((c) => (
-                  <button
-                    key={c}
-                    onClick={() => setNewTeamColor(c)}
-                    className={`h-5 w-5 rounded-full border-2 transition-transform ${newTeamColor === c ? "border-white scale-110" : "border-transparent"}`}
-                    style={{ backgroundColor: c }}
-                  />
-                ))}
-              </div>
               <div className="flex gap-1">
                 <Button size="sm" className="h-6 flex-1 text-[11px]" onClick={addTeam}>Add</Button>
                 <Button size="sm" variant="ghost" className="h-6 text-[11px]" onClick={() => { setAddingTeam(false); setNewTeamName(""); setTeamSearch(""); }}>Cancel</Button>
@@ -367,30 +354,61 @@ export function DropCard() {
           )}
 
           <div className="flex flex-col gap-1">
-            {teams.map((team, i) => (
-              <div
-                key={i}
-                onClick={() => setSelectedTeamIdx(i === selectedTeamIdx ? null : i)}
-                className={`flex items-center gap-3 rounded-lg px-3 py-3 cursor-pointer transition-all border ${
-                  selectedTeamIdx === i ? "bg-primary/15 border-primary/40" : "hover:bg-accent/50 border-transparent"
-                }`}
-              >
-                {(() => { const logo = bgmiTeams.find(t => t.name === team.name)?.logo_url; return logo
-                  ? <img src={logo} alt={team.name} className="h-6 w-6 object-contain shrink-0" />
-                  : <div className="h-4 w-4 rounded-full shrink-0 border border-white/20" style={{ backgroundColor: team.color }} />;
-                })()}
-                <span className="flex-1 text-sm truncate">{team.name}</span>
-                {pins.find((p) => p.teamIdx === i) && (
-                  <MapPin className="h-3.5 w-3.5 text-primary shrink-0" />
-                )}
-                <button
-                  onClick={(e) => { e.stopPropagation(); removeTeam(i); }}
-                  className="text-muted-foreground hover:text-destructive shrink-0 transition-colors"
-                >
-                  <X className="h-3.5 w-3.5" />
-                </button>
-              </div>
-            ))}
+            {teams.map((team, i) => {
+              const logo = bgmiTeams.find(t => t.name === team.name)?.logo_url;
+              const hasPin = !!pins.find((p) => p.teamIdx === i);
+              return (
+                <div key={i} className="flex flex-col">
+                  <div
+                    onClick={() => {
+                      setColorPickerFor(null);
+                      setSelectedTeamIdx(i === selectedTeamIdx ? null : i);
+                    }}
+                    className={`flex items-center gap-3 rounded-lg px-3 py-3 cursor-pointer transition-all border ${
+                      selectedTeamIdx === i ? "bg-primary/15 border-primary/40" : "hover:bg-accent/50 border-transparent"
+                    }`}
+                  >
+                    {logo
+                      ? <img src={logo} alt={team.name} className="h-6 w-6 object-contain shrink-0" />
+                      : <div className="h-4 w-4 rounded-full shrink-0 border border-white/20" style={{ backgroundColor: team.color }} />
+                    }
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (!hasPin) return;
+                        setColorPickerFor(colorPickerFor === i ? null : i);
+                      }}
+                      className={`flex-1 text-left text-sm truncate ${hasPin ? "hover:text-primary transition-colors" : ""}`}
+                    >
+                      {team.name}
+                    </button>
+                    {hasPin && <MapPin className="h-3.5 w-3.5 text-primary shrink-0" />}
+                    <button
+                      onClick={(e) => { e.stopPropagation(); removeTeam(i); }}
+                      className="text-muted-foreground hover:text-destructive shrink-0 transition-colors"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                  {colorPickerFor === i && (
+                    <div className="ml-3 mb-1 flex gap-2 px-2 py-1.5 rounded-md border border-white/10 bg-white/5">
+                      {DROP_COLORS.map((c) => (
+                        <button
+                          key={c}
+                          onClick={() => {
+                            setTeams((prev) => prev.map((t, idx) => idx === i ? { ...t, color: c } : t));
+                            setPins((prev) => prev.map((p) => p.teamIdx === i ? { ...p, color: c } : p));
+                            setColorPickerFor(null);
+                          }}
+                          className={`h-5 w-5 rounded-full border-2 transition-transform hover:scale-110 ${team.color === c ? "border-white scale-110" : "border-transparent"}`}
+                          style={{ backgroundColor: c }}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
             {teams.length === 0 && !addingTeam && (
               <p className="text-xs text-muted-foreground text-center py-4">Add teams to start marking drops</p>
             )}
