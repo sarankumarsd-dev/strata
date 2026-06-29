@@ -451,7 +451,7 @@ export function BoardEditor({ map, initial }: Props) {
                           ? "border-2 border-primary/80 ring-1 ring-primary/40"
                           : "border border-white/10 hover:border-white/30"
                       }`}
-                      style={{ background: "#3a3a3a", aspectRatio: "1600 / 1096" }}
+                      style={{ background: "#3a3a3a", aspectRatio: "530 / 185" }}
                     >
                       <img
                         src={g.image}
