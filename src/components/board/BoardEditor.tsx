@@ -451,20 +451,20 @@ export function BoardEditor({ map, initial }: Props) {
                           ? "border-primary/60 ring-1 ring-primary/40"
                           : "border-white/5 hover:border-white/20"
                       }`}
-                      style={{ background: "linear-gradient(135deg, #1a1a2e 0%, #0f0f1a 100%)" }}
+                      style={{ background: "#3a3a3a" }}
                     >
-                      {/* gun image — fills card, no rotation (already horizontal) */}
+                      {/* gun image — fills card edge to edge */}
                       <img
                         src={g.image}
                         alt={g.name}
-                        className={`absolute inset-0 w-full h-full object-contain px-2 py-1 brightness-110 transition-all duration-300 ${
+                        className={`absolute inset-0 w-full h-full object-contain scale-[1.05] transition-all duration-300 ${
                           gunId === g.id
-                            ? "drop-shadow-[0_0_10px_rgba(168,85,247,0.7)] brightness-125"
-                            : "group-hover:drop-shadow-[0_0_12px_rgba(255,255,255,0.6)] group-hover:brightness-130"
+                            ? "drop-shadow-[0_0_10px_rgba(168,85,247,0.9)]"
+                            : "group-hover:drop-shadow-[0_0_14px_rgba(255,255,255,0.8)]"
                         }`}
                       />
-                      {/* dark gradient overlay for text legibility */}
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
+                      {/* gradient overlay for text legibility */}
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-transparent to-transparent" />
                       {/* name — bottom left */}
                       <span className="absolute bottom-1 left-2 font-semibold text-[11px] text-white leading-tight drop-shadow-md">
                         {g.name}
