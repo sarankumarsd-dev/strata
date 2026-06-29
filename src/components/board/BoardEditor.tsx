@@ -441,14 +441,35 @@ export function BoardEditor({ map, initial }: Props) {
             {tool === "gun-arrow" && (
               <div className="space-y-2">
                 <Label className="text-xs">Weapon</Label>
-                <Select value={gunId} onValueChange={setGunId}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent className="max-h-64">
-                    {GUNS.map((g) => (
-                      <SelectItem key={g.id} value={g.id}>{g.name} · {g.category} · {g.effectiveRangeM}m</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <div className="rounded-lg border border-white/10 bg-black/40 p-2 flex flex-col gap-0.5 max-h-64 overflow-y-auto">
+                  {GUNS.map((g) => (
+                    <button
+                      key={g.id}
+                      onClick={() => setGunId(g.id)}
+                      className={`flex items-center gap-2 rounded-md px-2 py-1.5 text-left transition-all ${
+                        gunId === g.id
+                          ? "bg-primary/20 border border-primary/50"
+                          : "border border-transparent hover:bg-white/5"
+                      }`}
+                    >
+                      {g.image ? (
+                        <img
+                          src={g.image}
+                          alt={g.name}
+                          className="h-7 w-16 object-contain shrink-0 drop-shadow-[0_0_4px_rgba(255,255,255,0.6)] brightness-125"
+                        />
+                      ) : (
+                        <div className="h-7 w-16 shrink-0 flex items-center justify-center">
+                          <span className="font-mono text-[9px] text-muted-foreground uppercase tracking-widest">{g.category}</span>
+                        </div>
+                      )}
+                      <div className="flex flex-col min-w-0">
+                        <span className="text-xs font-semibold leading-tight truncate">{g.name}</span>
+                        <span className="font-mono text-[9px] text-muted-foreground">{g.category} · {g.effectiveRangeM}m</span>
+                      </div>
+                    </button>
+                  ))}
+                </div>
               </div>
             )}
             {tool === "rotation" && (
