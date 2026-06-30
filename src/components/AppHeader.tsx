@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { Crosshair, LogIn } from "lucide-react";
+import { LogIn } from "lucide-react";
 import { Button } from "@/components/ui";
 import { useAuth } from "@/lib/auth";
 import { AccountMenu } from "@/components/AccountMenu";
@@ -11,11 +11,11 @@ export function AppHeader() {
     <header className="sticky top-0 z-40 border-b border-border bg-background/80 backdrop-blur-xl">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6">
         <Link to="/" className="flex items-center gap-3 group">
-          <div className="grid h-[54px] w-[54px] shrink-0 place-items-center rounded-lg bg-gradient-to-br from-primary to-secondary text-primary-foreground glow-primary">
-            <Crosshair className="h-7 w-7" />
+          <div className="h-[54px] w-[54px] shrink-0 rounded-lg overflow-hidden bg-black">
+            <img src="/icon.gif" alt="Strata icon" className="h-full w-full object-cover" />
           </div>
           <div className="flex flex-col justify-between" style={{ height: "54px" }}>
-            <span className="font-display font-bold" style={{ fontSize: "38px", lineHeight: 1, letterSpacing: "0.04em" }}>
+            <span className="font-display font-bold text-silver-shine" style={{ fontSize: "38px", lineHeight: 1, letterSpacing: "0.04em" }}>
               Stra<span className="text-primary">ta</span>
             </span>
             <span className="text-white font-sans font-medium tracking-widest uppercase opacity-80" style={{ fontSize: "11px", letterSpacing: "0.18em" }}>
@@ -41,7 +41,7 @@ export function AppHeader() {
             Forum
           </Link>
           <Link to="/maps">
-            <Button className="ml-2 px-5 py-2 text-base font-medium btn-silver-shine">Start your strata</Button>
+            <Button className="ml-2 px-5 py-2 text-base font-medium">Start your strata</Button>
           </Link>
         </nav>
       </div>

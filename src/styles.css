@@ -191,6 +191,18 @@
   }
 }
 
+@keyframes text-shine-travel {
+  0%   { text-shadow: -60px 0 8px rgba(255,255,255,0); }
+  45%  { text-shadow:   0px 0 16px rgba(255,255,255,0.85); }
+  100% { text-shadow:  60px 0 8px rgba(255,255,255,0); }
+}
+
+@utility text-silver-shine {
+  animation: text-shine-travel 2.2s ease-in-out infinite;
+  overflow: hidden;
+  clip-path: inset(0 0 0 0);
+}
+
 @keyframes pulse-glow {
   0%, 100% { box-shadow: 0 0 0 0 color-mix(in oklab, var(--primary) 50%, transparent); }
   50%      { box-shadow: 0 0 0 8px color-mix(in oklab, var(--primary) 0%, transparent); }

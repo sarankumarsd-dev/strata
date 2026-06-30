@@ -94,23 +94,8 @@ export function MapThumb({ map, className = "", showLabels = false }: Props) {
           ))}
         </svg>
       )}
-      {/* corner brackets */}
-      <Bracket pos="tl" />
-      <Bracket pos="tr" />
-      <Bracket pos="bl" />
-      <Bracket pos="br" />
     </div>
   );
-}
-
-function Bracket({ pos }: { pos: "tl" | "tr" | "bl" | "br" }) {
-  const map = {
-    tl: "top-2 left-2 border-l-2 border-t-2 rounded-tl",
-    tr: "top-2 right-2 border-r-2 border-t-2 rounded-tr",
-    bl: "bottom-2 left-2 border-l-2 border-b-2 rounded-bl",
-    br: "bottom-2 right-2 border-r-2 border-b-2 rounded-br",
-  }[pos];
-  return <div className={`absolute h-3 w-3 border-primary/60 ${map}`} />;
 }
 
 function hashStr(s: string) {

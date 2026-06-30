@@ -282,7 +282,7 @@ export function DropCard() {
       </div>
 
       {/* Top bar — absolute, glass panel matching strategy board */}
-      <div className={`absolute left-0 right-0 top-0 z-30 flex items-center gap-2 px-3 py-2 ${PANEL} rounded-none`}>
+      <div className="absolute left-0 right-0 top-0 z-30 flex items-center gap-2 px-3 py-2 border-b border-transparent bg-transparent rounded-none transition-all duration-300 hover:border-white/10 hover:bg-black/40 hover:backdrop-blur-xl">
         <button
           onClick={() => navigate(-1)}
           className="flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-semibold transition-colors hover:bg-accent/50"
@@ -293,7 +293,7 @@ export function DropCard() {
         <div className="mx-1 h-4 w-px bg-border/60" />
         <span className="font-mono text-sm uppercase tracking-widest text-primary font-bold">{mapInfo.name}</span>
         <span className="text-muted-foreground">·</span>
-        <span className="font-heading text-base font-semibold text-foreground/80">Drop Card</span>
+        <span className="font-heading text-base font-semibold">Drop Card</span>
         <div className="ml-auto flex items-center gap-2">
           <Button size="sm" className="gap-2" onClick={() => setSaveDialogOpen(true)} disabled={pins.length === 0}>
             <Save className="h-4 w-4" /> Save

@@ -19,23 +19,27 @@ export function Maps() {
             <h1 className="mt-2 font-heading text-3xl font-bold md:text-4xl">Pick a map to start</h1>
             <p className="mt-2 text-muted-foreground">All the maps are in 8K HD satellite imagery and 10× zoomable. Click on any map to open.</p>
           </div>
-          <div className="flex items-center gap-1 rounded-lg border border-border bg-card/50 p-1">
+          <div className="relative flex items-center gap-1 rounded-lg border border-border bg-card/50 p-1">
+            {/* sliding active indicator */}
+            <div
+              className="absolute top-1 bottom-1 rounded-md bg-primary shadow transition-all duration-300 ease-in-out"
+              style={{
+                width: "calc(50% - 6px)",
+                left: mode === "strategy" ? "4px" : "calc(50% + 2px)",
+              }}
+            />
             <button
               onClick={() => setMode("strategy")}
-              className={`flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition-all ${
-                mode === "strategy"
-                  ? "bg-primary text-primary-foreground shadow"
-                  : "text-muted-foreground hover:text-foreground"
+              className={`relative z-10 flex w-36 items-center justify-center gap-2 rounded-md py-2 text-sm font-medium transition-colors duration-300 whitespace-nowrap ${
+                mode === "strategy" ? "text-primary-foreground" : "text-muted-foreground hover:text-foreground"
               }`}
             >
               <Plus className="h-4 w-4" /> New Strategy
             </button>
             <button
               onClick={() => setMode("drop")}
-              className={`flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition-all ${
-                mode === "drop"
-                  ? "bg-primary text-primary-foreground shadow"
-                  : "text-muted-foreground hover:text-foreground"
+              className={`relative z-10 flex w-36 items-center justify-center gap-2 rounded-md py-2 text-sm font-medium transition-colors duration-300 whitespace-nowrap ${
+                mode === "drop" ? "text-primary-foreground" : "text-muted-foreground hover:text-foreground"
               }`}
             >
               <MapPin className="h-4 w-4" /> Mark Drop
