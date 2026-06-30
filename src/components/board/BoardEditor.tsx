@@ -3,7 +3,9 @@ import {
   MousePointer2, Circle as CircleIcon, MapPin, Octagon, Mountain, TrendingDown,
   Crosshair, Route as RouteIcon, Flame, Type as TypeIcon, Undo2, Redo2, Trash2,
   Save, Eye, Sparkles, PanelRightClose, PanelRightOpen, ArrowLeft, Layers, X, Search,
+  Video, StopCircle, Download, Mic, MicOff, Music, ChevronDown, Pause, Play,
 } from "lucide-react";
+import { useScreenRecorder } from "@/hooks/useScreenRecorder";
 import { Link } from "react-router-dom";
 
 import type { BoardDoc, BoardItem, Pt, ToolId } from "@/lib/board-types";
@@ -154,6 +156,15 @@ export function BoardEditor({ map, initial }: Props) {
   const [bgmiTeams, setBgmiTeams] = useState<{ name: string; logo_url: string }[]>([]);
   const [activeDropCardTitle, setActiveDropCardTitle] = useState<string | null>(null);
 
+  // Screen recorder
+  const recorder = useScreenRecorder();
+  const [recPanelOpen, setRecPanelOpen] = useState(false);
+  const [recMic, setRecMic] = useState(false);
+  const [recMusicFile, setRecMusicFile] = useState<File | null>(null);
+  const [recQuality, setRecQuality] = useState<"720p" | "1080p">("720p");
+  const [recVideoUrl, setRecVideoUrl] = useState<string | null>(null);
+  const musicInputRef = useRef<HTMLInputElement>(null);
+
   // Auto-show panel when cursor approaches right edge; auto-hide when it leaves.
   useEffect(() => {
     const EDGE_THRESHOLD = 40; // px from right edge to trigger open
@@ -195,6 +206,37 @@ export function BoardEditor({ map, initial }: Props) {
   useEffect(() => {
     supabase.from("bgmi_teams").select("name, logo_url").then(({ data }) => { if (data) setBgmiTeams(data); });
   }, []);
+
+  useEffect(() => {
+    if (recorder.blob) {
+      const url = URL.createObjectURL(recorder.blob);
+      setRecVideoUrl(url);
+      return () => URL.revokeObjectURL(url);
+    }
+  }, [recorder.blob]);
+
+  function formatDuration(s: number) {
+    const m = Math.floor(s / 60).toString().padStart(2, "0");
+    const sec = (s % 60).toString().padStart(2, "0");
+    return `${m}:${sec}`;
+  }
+
+  async function handleStartRecording() {
+    setRecPanelOpen(false);
+    try {
+      await recorder.start({ mic: recMic, musicFile: recMusicFile, quality: recQuality });
+    } catch (e: any) {
+      if (e?.name !== "NotAllowedError") toast.error("Could not start recording");
+    }
+  }
+
+  function handleDownloadRecording() {
+    if (!recorder.blob) return;
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(recorder.blob);
+    a.download = `${title.replace(/[^a-z0-9]/gi, "-").toLowerCase() || "strata"}-${recQuality}.webm`;
+    a.click();
+  }
 
   const filteredStrategies = savedStrategies.filter((s) =>
     s.title.toLowerCase().includes(title.toLowerCase()) && s.title !== title
@@ -379,6 +421,109 @@ export function BoardEditor({ map, initial }: Props) {
             <Button variant="ghost" size="icon" onClick={clearAll}><Trash2 className="h-4 w-4" /></Button>
           </TooltipTrigger><TooltipContent>Clear board</TooltipContent></Tooltip>
         </div>
+        {/* ===== Record button ===== */}
+        <div className="relative">
+          {recorder.state === "idle" && (
+            <button
+              onClick={() => setRecPanelOpen((v) => !v)}
+              className="flex items-center gap-1.5 rounded-md border border-red-500/40 bg-red-500/10 px-2.5 py-1.5 text-xs font-semibold text-red-400 hover:bg-red-500/20 transition-colors"
+            >
+              <Video className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">Record</span>
+              <ChevronDown className="h-3 w-3 opacity-60" />
+            </button>
+          )}
+          {recorder.state === "recording" && (
+            <button
+              onClick={recorder.stop}
+              className="flex items-center gap-1.5 rounded-md border border-red-500/60 bg-red-500/20 px-2.5 py-1.5 text-xs font-semibold text-red-400 hover:bg-red-500/30 transition-colors"
+            >
+              <span className="animate-rec-pulse h-2 w-2 rounded-full bg-red-500 shrink-0" />
+              <span className="font-mono text-red-300">{formatDuration(recorder.duration)}</span>
+              <StopCircle className="h-3.5 w-3.5 ml-0.5" />
+            </button>
+          )}
+
+          {/* Record options panel */}
+          {recPanelOpen && recorder.state === "idle" && (
+            <div className="absolute right-0 top-full mt-2 z-50 w-56 rounded-xl border border-white/10 bg-background/95 backdrop-blur-xl shadow-2xl p-3 space-y-3">
+              <div className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">Record options</div>
+
+              {/* Quality */}
+              <div className="space-y-1">
+                <div className="text-xs text-muted-foreground">Quality</div>
+                <div className="flex gap-1.5">
+                  {(["720p", "1080p"] as const).map((q) => (
+                    <button
+                      key={q}
+                      onClick={() => setRecQuality(q)}
+                      className={`flex-1 rounded-md border py-1 text-xs font-mono font-semibold transition-colors ${
+                        recQuality === q
+                          ? "border-primary/60 bg-primary/10 text-primary"
+                          : "border-white/10 text-muted-foreground hover:border-white/20"
+                      }`}
+                    >
+                      {q}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Mic toggle */}
+              <button
+                onClick={() => setRecMic((v) => !v)}
+                className={`w-full flex items-center gap-2 rounded-md border px-2.5 py-2 text-xs transition-colors ${
+                  recMic
+                    ? "border-primary/60 bg-primary/10 text-primary"
+                    : "border-white/10 text-muted-foreground hover:border-white/20"
+                }`}
+              >
+                {recMic ? <Mic className="h-3.5 w-3.5" /> : <MicOff className="h-3.5 w-3.5" />}
+                {recMic ? "Mic on" : "Mic off"}
+              </button>
+
+              {/* Music file */}
+              <div>
+                <input
+                  ref={musicInputRef}
+                  type="file"
+                  accept="audio/*"
+                  className="hidden"
+                  onChange={(e) => setRecMusicFile(e.target.files?.[0] ?? null)}
+                />
+                <button
+                  onClick={() => musicInputRef.current?.click()}
+                  className={`w-full flex items-center gap-2 rounded-md border px-2.5 py-2 text-xs transition-colors ${
+                    recMusicFile
+                      ? "border-primary/60 bg-primary/10 text-primary"
+                      : "border-white/10 text-muted-foreground hover:border-white/20"
+                  }`}
+                >
+                  <Music className="h-3.5 w-3.5 shrink-0" />
+                  <span className="truncate">{recMusicFile ? recMusicFile.name : "Add music (optional)"}</span>
+                  {recMusicFile && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setRecMusicFile(null); if (musicInputRef.current) musicInputRef.current.value = ""; }}
+                      className="ml-auto text-muted-foreground hover:text-destructive"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  )}
+                </button>
+              </div>
+
+              {/* Start button */}
+              <button
+                onClick={handleStartRecording}
+                className="w-full flex items-center justify-center gap-2 rounded-md bg-red-500 hover:bg-red-600 text-white text-xs font-semibold py-2 transition-colors"
+              >
+                <Video className="h-3.5 w-3.5" /> Start Recording
+              </button>
+              <p className="text-[10px] text-muted-foreground leading-tight">You'll choose which tab/window to capture.</p>
+            </div>
+          )}
+        </div>
+
         <div className="mx-1 hidden items-center gap-2 rounded-md border border-border/60 bg-background/50 px-2 py-1 sm:flex">
           <Eye className="h-4 w-4 text-muted-foreground" />
           <Label className="text-xs text-muted-foreground">Public</Label>
@@ -481,6 +626,36 @@ export function BoardEditor({ map, initial }: Props) {
           </button>
         )}
       </div>
+
+      {/* ===== Floating recording controls ===== */}
+      {(recorder.state === "recording" || recorder.state === "paused") && (
+        <div className="absolute bottom-20 left-1/2 -translate-x-1/2 z-40 flex items-center gap-2 rounded-full border border-red-500/40 bg-black/80 backdrop-blur-xl px-4 py-2.5 shadow-2xl">
+          <span className={`h-2.5 w-2.5 rounded-full bg-red-500 shrink-0 ${recorder.state === "recording" ? "animate-rec-pulse" : "opacity-40"}`} />
+          <span className="font-mono text-sm text-red-300 w-12 text-center">{formatDuration(recorder.duration)}</span>
+          <div className="w-px h-4 bg-white/15 mx-1" />
+          {recorder.state === "recording" ? (
+            <button
+              onClick={recorder.pause}
+              className="flex items-center gap-1.5 rounded-full bg-white/10 hover:bg-white/20 px-3 py-1 text-xs font-semibold text-white transition-colors"
+            >
+              <Pause className="h-3.5 w-3.5" /> Pause
+            </button>
+          ) : (
+            <button
+              onClick={recorder.resume}
+              className="flex items-center gap-1.5 rounded-full bg-primary/20 hover:bg-primary/30 px-3 py-1 text-xs font-semibold text-primary transition-colors"
+            >
+              <Play className="h-3.5 w-3.5" /> Resume
+            </button>
+          )}
+          <button
+            onClick={recorder.stop}
+            className="flex items-center gap-1.5 rounded-full bg-red-500/20 hover:bg-red-500/40 px-3 py-1 text-xs font-semibold text-red-400 transition-colors"
+          >
+            <StopCircle className="h-3.5 w-3.5" /> Stop
+          </button>
+        </div>
+      )}
 
       {/* ===== Floating right panel — slides in from right edge on hover ===== */}
       <aside
@@ -688,6 +863,50 @@ export function BoardEditor({ map, initial }: Props) {
               Save
             </Button>
             <Button variant="outline" onClick={() => { setRenameDialogOpen(false); setRenameDupeError(false); setTitle("Untitled strategy"); }}>Cancel</Button>
+          </div>
+        </div>
+      </div>
+    )}
+
+    {/* ===== Recording preview dialog ===== */}
+    {recorder.state === "stopped" && recVideoUrl && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+        <div className="w-full max-w-xl rounded-xl border border-border bg-card shadow-2xl overflow-hidden">
+          <div className="flex items-center justify-between px-5 pt-5 pb-3">
+            <div>
+              <h2 className="font-heading text-lg font-bold">Recording ready</h2>
+              <p className="text-xs text-muted-foreground mt-0.5">{recQuality} · WebM · {formatDuration(recorder.duration)}</p>
+            </div>
+            <button
+              onClick={() => { recorder.reset(); setRecVideoUrl(null); }}
+              className="text-muted-foreground hover:text-foreground"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+          <video
+            src={recVideoUrl}
+            controls
+            className="w-full bg-black max-h-64 object-contain"
+          />
+          <div className="p-4 flex gap-2">
+            <button
+              onClick={handleDownloadRecording}
+              className="flex-1 flex items-center justify-center gap-2 rounded-md bg-primary hover:bg-primary/90 text-primary-foreground text-sm font-semibold py-2.5 transition-colors"
+            >
+              <Download className="h-4 w-4" /> Download
+            </button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  disabled
+                  className="flex-1 flex items-center justify-center gap-2 rounded-md border border-white/10 text-muted-foreground text-sm font-semibold py-2.5 cursor-not-allowed opacity-50"
+                >
+                  Post to Forum
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>Forum video posts — coming soon</TooltipContent>
+            </Tooltip>
           </div>
         </div>
       </div>

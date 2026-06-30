@@ -260,6 +260,14 @@
   animation: gun-climb 0.75s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
 }
 
+@keyframes rec-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.2; }
+}
+.animate-rec-pulse {
+  animation: rec-pulse 1s ease-in-out infinite;
+}
+
 /* Transparent scrollbar — thumb only, no track */
 ::-webkit-scrollbar { width: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }
