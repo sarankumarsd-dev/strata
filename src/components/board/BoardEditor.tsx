@@ -220,6 +220,8 @@ export function BoardEditor({ map, initial }: Props) {
   const [recQuality, setRecQuality] = useState<"720p" | "1080p">("720p");
   const [recVideoUrl, setRecVideoUrl] = useState<string | null>(null);
   const musicInputRef = useRef<HTMLInputElement>(null);
+  const [floatPos, setFloatPos] = useState<{ x: number; y: number } | null>(null);
+  const floatDragRef = useRef<{ startX: number; startY: number; origX: number; origY: number } | null>(null);
 
   // Auto-show panel when cursor approaches right edge; auto-hide when it leaves.
   useEffect(() => {
@@ -279,6 +281,7 @@ export function BoardEditor({ map, initial }: Props) {
 
   async function handleStartRecording() {
     setRecPanelOpen(false);
+    setFloatPos(null);
     try {
       await recorder.start({ mic: recMic, musicFile: recMusicFile, quality: recQuality });
     } catch (e: any) {
@@ -593,15 +596,13 @@ export function BoardEditor({ map, initial }: Props) {
           </Button>
         )}
         <div className="relative">
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-8 gap-1.5 border-primary/40 text-primary hover:bg-primary/10 text-xs"
+          <button
             onClick={() => { setImportDialogOpen(true); setDropCardSearch(""); }}
+            className="flex h-8 items-center gap-1.5 rounded-md border border-primary/40 px-2.5 text-xs font-semibold text-primary hover:bg-primary/10 transition-colors"
           >
             <Layers className="h-3.5 w-3.5" />
             <span className="hidden sm:inline">{activeDropCardTitle ?? "Import Drop"}</span>
-          </Button>
+          </button>
           {activeDropCardTitle && (
             <button
               onClick={() => { setDropPins([]); setActiveDropCardTitle(null); }}
@@ -611,16 +612,14 @@ export function BoardEditor({ map, initial }: Props) {
             </button>
           )}
         </div>
-        <Button
+        <button
           onClick={handleSave}
           disabled={saving}
-          variant="default"
-          size="sm"
-          className="h-8 gap-1.5 text-xs"
+          className="flex h-8 items-center gap-1.5 rounded-md bg-primary px-2.5 text-xs font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-50 transition-colors"
           style={shakeSave ? { animation: "shake 0.4s ease" } : undefined}
         >
           <Save className="h-3.5 w-3.5" /> <span className="hidden sm:inline">{saving ? "Saving…" : initial?.id ? "Update" : "Save"}</span>
-        </Button>
+        </button>
       </div>
 
       {/* ===== Floating left toolbar — desktop only ===== */}
@@ -685,33 +684,61 @@ export function BoardEditor({ map, initial }: Props) {
         )}
       </div>
 
-      {/* ===== Floating recording controls ===== */}
+      {/* ===== Floating recording controls (draggable, icon-only) ===== */}
       {(recorder.state === "recording" || recorder.state === "paused") && (
-        <div className="absolute bottom-20 left-1/2 -translate-x-1/2 z-40 flex items-center gap-2 rounded-full border border-red-500/40 bg-black/80 backdrop-blur-xl px-4 py-2.5 shadow-2xl">
-          <span className={`h-2.5 w-2.5 rounded-full bg-red-500 shrink-0 ${recorder.state === "recording" ? "animate-rec-pulse" : "opacity-40"}`} />
-          <span className="font-mono text-sm text-red-300 w-12 text-center">{formatDuration(recorder.duration)}</span>
-          <div className="w-px h-4 bg-white/15 mx-1" />
-          {recorder.state === "recording" ? (
-            <button
-              onClick={recorder.pause}
-              className="flex items-center gap-1.5 rounded-full bg-white/10 hover:bg-white/20 px-3 py-1 text-xs font-semibold text-white transition-colors"
-            >
-              <Pause className="h-3.5 w-3.5" /> Pause
-            </button>
-          ) : (
-            <button
-              onClick={recorder.resume}
-              className="flex items-center gap-1.5 rounded-full bg-primary/20 hover:bg-primary/30 px-3 py-1 text-xs font-semibold text-primary transition-colors"
-            >
-              <Play className="h-3.5 w-3.5" /> Resume
-            </button>
-          )}
-          <button
-            onClick={recorder.stop}
-            className="flex items-center gap-1.5 rounded-full bg-red-500/20 hover:bg-red-500/40 px-3 py-1 text-xs font-semibold text-red-400 transition-colors"
-          >
-            <StopCircle className="h-3.5 w-3.5" /> Stop
-          </button>
+        <div
+          className="absolute z-40 flex items-center gap-1 rounded-full border border-red-500/40 bg-black/85 backdrop-blur-xl px-2 py-1 shadow-2xl cursor-grab active:cursor-grabbing select-none"
+          style={floatPos ? { left: floatPos.x, top: floatPos.y } : { bottom: 80, left: "50%", transform: "translateX(-50%)" }}
+          onMouseDown={(e) => {
+            e.preventDefault();
+            const el = e.currentTarget;
+            const parent = el.offsetParent as HTMLElement ?? document.body;
+            const elRect = el.getBoundingClientRect();
+            const parentRect = parent.getBoundingClientRect();
+            const origX = elRect.left - parentRect.left;
+            const origY = elRect.top - parentRect.top;
+            floatDragRef.current = { startX: e.clientX, startY: e.clientY, origX, origY };
+            function onMove(ev: MouseEvent) {
+              if (!floatDragRef.current) return;
+              setFloatPos({
+                x: floatDragRef.current.origX + (ev.clientX - floatDragRef.current.startX),
+                y: floatDragRef.current.origY + (ev.clientY - floatDragRef.current.startY),
+              });
+            }
+            function onUp() {
+              floatDragRef.current = null;
+              window.removeEventListener("mousemove", onMove);
+              window.removeEventListener("mouseup", onUp);
+            }
+            window.addEventListener("mousemove", onMove);
+            window.addEventListener("mouseup", onUp);
+          }}
+        >
+          <span className={`h-1.5 w-1.5 rounded-full bg-red-500 shrink-0 ${recorder.state === "recording" ? "animate-rec-pulse" : "opacity-30"}`} />
+          <span className="font-mono text-[9px] text-red-300 w-8 text-center tabular-nums">{formatDuration(recorder.duration)}</span>
+          <div className="w-px h-2.5 bg-white/15" />
+          <Tooltip>
+            <TooltipTrigger asChild>
+              {recorder.state === "recording" ? (
+                <button onClick={recorder.pause} className="grid h-5 w-5 place-items-center rounded-full hover:bg-white/15 text-white/70 hover:text-white transition-colors">
+                  <Pause className="h-2.5 w-2.5" />
+                </button>
+              ) : (
+                <button onClick={recorder.resume} className="grid h-5 w-5 place-items-center rounded-full hover:bg-primary/20 text-primary transition-colors">
+                  <Play className="h-2.5 w-2.5" />
+                </button>
+              )}
+            </TooltipTrigger>
+            <TooltipContent>{recorder.state === "recording" ? "Pause" : "Resume"}</TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button onClick={recorder.stop} className="grid h-5 w-5 place-items-center rounded-full hover:bg-red-500/30 text-red-400 transition-colors">
+                <StopCircle className="h-2.5 w-2.5" />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent>Stop recording</TooltipContent>
+          </Tooltip>
         </div>
       )}
 

@@ -13,6 +13,7 @@ export function useScreenRecorder() {
   const [blob, setBlob] = useState<Blob | null>(null);
   const [duration, setDuration] = useState(0);
   const mrRef = useRef<MediaRecorder | null>(null);
+  const screenStreamRef = useRef<MediaStream | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const audioCtxRef = useRef<AudioContext | null>(null);
@@ -32,6 +33,7 @@ export function useScreenRecorder() {
       video: vConstraint as any,
       audio: false,
     });
+    screenStreamRef.current = screenStream;
 
     const audioCtx = new AudioContext();
     audioCtxRef.current = audioCtx;
@@ -102,6 +104,8 @@ export function useScreenRecorder() {
   const stop = useCallback(() => {
     const mr = mrRef.current;
     if (mr && (mr.state === "recording" || mr.state === "paused")) mr.stop();
+    screenStreamRef.current?.getTracks().forEach(t => t.stop());
+    screenStreamRef.current = null;
     if (timerRef.current) clearInterval(timerRef.current);
   }, []);
 
