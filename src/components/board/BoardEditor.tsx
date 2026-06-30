@@ -220,6 +220,8 @@ export function BoardEditor({ map, initial }: Props) {
   const [recMusicFile, setRecMusicFile] = useState<File | null>(null);
   const [recQuality, setRecQuality] = useState<"720p" | "1080p">("720p");
   const [recVideoUrl, setRecVideoUrl] = useState<string | null>(null);
+  const [recDirectMode, setRecDirectMode] = useState(true); // true = board-only, false = screen capture
+  const mirrorCanvasRef = useRef<HTMLCanvasElement>(null);
   const musicInputRef = useRef<HTMLInputElement>(null);
   const [floatPos, setFloatPos] = useState<{ x: number; y: number } | null>(null);
   const floatDragRef = useRef<{ startX: number; startY: number; origX: number; origY: number } | null>(null);
@@ -291,7 +293,7 @@ export function BoardEditor({ map, initial }: Props) {
   async function handleStartRecording() {
     setRecPanelOpen(false);
     setFloatPos(null);
-    if (recRegionMode) {
+    if (!recDirectMode && recRegionMode) {
       setCropRegion(null);
       setSelRect(null);
       setRecRegionSelecting(true);
@@ -302,7 +304,13 @@ export function BoardEditor({ map, initial }: Props) {
 
   async function doStartRecording(region: CropRegion | null) {
     try {
-      await recorder.start({ mic: recMic, musicFile: recMusicFile, quality: recQuality, cropRegion: region });
+      await recorder.start({
+        mic: recMic,
+        musicFile: recMusicFile,
+        quality: recQuality,
+        cropRegion: recDirectMode ? null : region,
+        canvasEl: recDirectMode ? mirrorCanvasRef.current : null,
+      });
     } catch (e: any) {
       if (e?.name !== "NotAllowedError") toast.error("Could not start recording");
     }
@@ -310,9 +318,10 @@ export function BoardEditor({ map, initial }: Props) {
 
   function handleDownloadRecording() {
     if (!recorder.blob) return;
+    const ext = recorder.mimeType.includes("mp4") ? "mp4" : "webm";
     const a = document.createElement("a");
     a.href = URL.createObjectURL(recorder.blob);
-    a.download = `${title.replace(/[^a-z0-9]/gi, "-").toLowerCase() || "strata"}-${recQuality}.webm`;
+    a.download = `${title.replace(/[^a-z0-9]/gi, "-").toLowerCase() || "strata"}-${recQuality}.${ext}`;
     a.click();
   }
 
@@ -444,7 +453,11 @@ export function BoardEditor({ map, initial }: Props) {
           onCommitBuilding={commitBuilding}
           onRemove={removeItem}
           dropPins={dropPins}
+          mirrorCanvasRef={mirrorCanvasRef}
+          isDirectRecording={recDirectMode && (recorder.state === "recording" || recorder.state === "paused")}
         />
+        {/* Hidden canvas used for direct board recording */}
+        <canvas ref={mirrorCanvasRef} className="hidden" />
         {/* In-canvas instruction strip — hidden on mobile (bottom toolbar handles it) */}
         <div className="pointer-events-none absolute bottom-3 left-1/2 -translate-x-1/2 hidden rounded-md bg-transparent backdrop-blur-xl border border-white/10 px-3 py-1.5 font-mono text-xs text-muted-foreground md:block">
           {TOOLS.find((t) => t.id === tool)?.hint}
@@ -504,7 +517,7 @@ export function BoardEditor({ map, initial }: Props) {
           {recorder.state === "idle" && (
             <button
               onClick={() => {
-                if (!initial?.id) {
+                if (!initial?.id && !import.meta.env.DEV) {
                   toast.error("Save your strategy first before recording.");
                   setShakeRec(true);
                   setTimeout(() => setShakeRec(false), 500);
@@ -536,6 +549,26 @@ export function BoardEditor({ map, initial }: Props) {
           {recPanelOpen && recorder.state === "idle" && (
             <div className="absolute right-0 top-full mt-2 z-50 w-56 rounded-xl border border-white/10 bg-background/95 backdrop-blur-xl shadow-2xl p-3 space-y-3">
               <div className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">Record options</div>
+
+              {/* Mode: board only vs screen capture */}
+              <div className="space-y-1">
+                <div className="text-xs text-muted-foreground">Source</div>
+                <div className="flex gap-1.5">
+                  {([["board", "Board only"], ["screen", "Screen capture"]] as const).map(([mode, label]) => (
+                    <button
+                      key={mode}
+                      onClick={() => setRecDirectMode(mode === "board")}
+                      className={`flex-1 rounded-md border py-1 text-xs font-mono font-semibold transition-colors ${
+                        (mode === "board") === recDirectMode
+                          ? "border-primary/60 bg-primary/10 text-primary"
+                          : "border-white/10 text-muted-foreground hover:border-white/20"
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
 
               {/* Quality */}
               <div className="space-y-1">
@@ -600,20 +633,22 @@ export function BoardEditor({ map, initial }: Props) {
                 </button>
               </div>
 
-              {/* Crop region toggle */}
-              <button
-                onClick={() => { setRecRegionMode(v => !v); if (recRegionMode) setCropRegion(null); }}
-                className={`w-full flex items-center gap-2 rounded-md border px-2.5 py-2 text-xs transition-colors ${
-                  recRegionMode
-                    ? "border-primary/60 bg-primary/10 text-primary"
-                    : "border-white/10 text-muted-foreground hover:border-white/20"
-                }`}
-              >
-                <Crop className="h-3.5 w-3.5 shrink-0" />
-                {recRegionMode
-                  ? cropRegion ? `Region: ${Math.round(cropRegion.w)}×${Math.round(cropRegion.h)}px` : "Draw region on map"
-                  : "Select region (optional)"}
-              </button>
+              {/* Crop region toggle — only for screen capture mode */}
+              {!recDirectMode && (
+                <button
+                  onClick={() => { setRecRegionMode(v => !v); if (recRegionMode) setCropRegion(null); }}
+                  className={`w-full flex items-center gap-2 rounded-md border px-2.5 py-2 text-xs transition-colors ${
+                    recRegionMode
+                      ? "border-primary/60 bg-primary/10 text-primary"
+                      : "border-white/10 text-muted-foreground hover:border-white/20"
+                  }`}
+                >
+                  <Crop className="h-3.5 w-3.5 shrink-0" />
+                  {recRegionMode
+                    ? cropRegion ? `Region: ${Math.round(cropRegion.w)}×${Math.round(cropRegion.h)}px` : "Draw region on map"
+                    : "Select region (optional)"}
+                </button>
+              )}
 
               {/* Start button */}
               <button
@@ -621,9 +656,11 @@ export function BoardEditor({ map, initial }: Props) {
                 className="w-full flex items-center justify-center gap-2 rounded-md bg-red-500 hover:bg-red-600 text-white text-xs font-semibold py-2 transition-colors"
               >
                 <Video className="h-3.5 w-3.5" />
-                {recRegionMode && !cropRegion ? "Draw Region First" : "Start Recording"}
+                {!recDirectMode && recRegionMode && !cropRegion ? "Draw Region First" : "Start Recording"}
               </button>
-              <p className="text-[10px] text-muted-foreground leading-tight">You'll choose which tab/window to capture.</p>
+              <p className="text-[10px] text-muted-foreground leading-tight">
+                {recDirectMode ? "Records the map directly — no screen share dialog." : "You'll choose which tab/window to capture."}
+              </p>
             </div>
           )}
         </div>
@@ -1083,7 +1120,7 @@ export function BoardEditor({ map, initial }: Props) {
           <div className="flex items-center justify-between px-5 pt-5 pb-3">
             <div>
               <h2 className="font-heading text-lg font-bold">Recording ready</h2>
-              <p className="text-xs text-muted-foreground mt-0.5">{recQuality} · WebM · {formatDuration(recorder.duration)}</p>
+              <p className="text-xs text-muted-foreground mt-0.5">{recQuality} · {recorder.mimeType.includes("mp4") ? "MP4" : "WebM"} · {formatDuration(recorder.duration)}</p>
             </div>
             <button
               onClick={() => { recorder.reset(); setRecVideoUrl(null); }}

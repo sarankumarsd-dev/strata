@@ -31,6 +31,9 @@ interface Props {
   onRemove: (id: string) => void;
   readOnly?: boolean;
   dropPins?: DropPin[];
+  // Direct recording: mirror map+SVG to this canvas when active
+  mirrorCanvasRef?: React.RefObject<HTMLCanvasElement | null>;
+  isDirectRecording?: boolean;
 }
 
 // How many px of movement before a touch-start is treated as a pan drag
@@ -43,6 +46,7 @@ export function MapCanvas(props: Props) {
   const {
     map, doc, tool, zoneRadius, gunId, rotationSplit, rushMode,
     buildingPoints, onAdd, onUpdateBuilding, onCommitBuilding, onRemove, readOnly, dropPins,
+    mirrorCanvasRef, isDirectRecording,
   } = props;
 
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -79,6 +83,102 @@ export function MapCanvas(props: Props) {
   const panRef = useRef(pan);
   useEffect(() => { zoomRef.current = zoom; }, [zoom]);
   useEffect(() => { panRef.current = pan; }, [pan]);
+
+  // Mirror canvas: render map + SVG to an offscreen canvas for direct recording
+  useEffect(() => {
+    if (!isDirectRecording || !mirrorCanvasRef?.current) return;
+    const canvas = mirrorCanvasRef.current;
+    const container = containerRef.current;
+    const svgEl = svgRef.current;
+    if (!container || !svgEl) return;
+
+    const rect = container.getBoundingClientRect();
+    const W = rect.width;
+    const H = rect.height;
+    canvas.width = W;
+    canvas.height = H;
+    const ctx = canvas.getContext("2d")!;
+
+    const mapImg = container.querySelector("img") as HTMLImageElement | null;
+
+    // object-contain: draw image centred inside (dx,dy,dw,dh) preserving aspect ratio
+    function drawContain(img: HTMLImageElement, dx: number, dy: number, dw: number, dh: number) {
+      const ia = img.naturalWidth / img.naturalHeight;
+      const ca = dw / dh;
+      let sw = dw, sh = dh, sx = dx, sy = dy;
+      if (ia > ca) { sh = dw / ia; sy = dy + (dh - sh) / 2; }
+      else         { sw = dh * ia; sx = dx + (dw - sw) / 2; }
+      ctx.drawImage(img, sx, sy, sw, sh);
+    }
+
+    const CSS_VARS: Record<string, string> = {
+      "--primary": "oklch(0.80 0.16 295)",
+      "--secondary": "oklch(0.70 0.22 350)",
+      "--success": "oklch(0.78 0.18 145)",
+      "--warning": "oklch(0.82 0.17 75)",
+      "--danger": "oklch(0.66 0.22 25)",
+      "--foreground": "oklch(0.97 0.005 250)",
+      "--background": "oklch(0.16 0.018 260)",
+      "--muted-foreground": "oklch(0.70 0.015 250)",
+    };
+
+    // Cache the loaded SVG as an Image — swap atomically when the new one loads
+    let svgImg: HTMLImageElement | null = null;
+    let svgTimer: ReturnType<typeof setTimeout> | null = null;
+    let pendingUrl: string | null = null;
+
+    const updateSvg = () => {
+      let str = new XMLSerializer().serializeToString(svgEl);
+      for (const [name, val] of Object.entries(CSS_VARS)) {
+        str = str.replaceAll(`var(${name})`, val);
+      }
+      str = str.replace(/<svg([^>]*)>/, (_m, attrs) => {
+        const clean = attrs.replace(/\s*(width|height)="[^"]*"/g, "");
+        return `<svg${clean} width="${W}" height="${H}">`;
+      });
+      const blob = new Blob([str], { type: "image/svg+xml" });
+      const url = URL.createObjectURL(blob);
+      const img = new Image();
+      img.onload = () => {
+        if (pendingUrl) URL.revokeObjectURL(pendingUrl);
+        pendingUrl = url;
+        svgImg = img; // swap atomically — rAF picks it up next frame
+      };
+      img.onerror = () => URL.revokeObjectURL(url);
+      img.src = url;
+      svgTimer = setTimeout(updateSvg, 150);
+    };
+    updateSvg();
+
+    let rafId: number;
+    const draw = () => {
+      const z = zoomRef.current;
+      const p = panRef.current;
+      ctx.clearRect(0, 0, W, H);
+      ctx.fillStyle = "oklch(0.16 0.018 260)";
+      ctx.fillRect(0, 0, W, H);
+      ctx.save();
+      ctx.translate(p.x, p.y);
+      // Map: object-contain inside the zoomed area
+      if (mapImg && mapImg.complete && mapImg.naturalWidth > 0) {
+        drawContain(mapImg, 0, 0, W * z, H * z);
+      }
+      // SVG: fills the full zoomed area (preserveAspectRatio="none" on screen)
+      if (svgImg) {
+        ctx.drawImage(svgImg, 0, 0, W * z, H * z);
+      }
+      ctx.restore();
+      rafId = requestAnimationFrame(draw);
+    };
+    draw();
+
+    return () => {
+      cancelAnimationFrame(rafId);
+      if (svgTimer) clearTimeout(svgTimer);
+      if (pendingUrl) URL.revokeObjectURL(pendingUrl);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isDirectRecording]);
 
   useEffect(() => {
     const el = containerRef.current;

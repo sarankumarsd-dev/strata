@@ -9,11 +9,13 @@ export interface RecordOptions {
   musicFile: File | null;
   quality: "720p" | "1080p";
   cropRegion?: CropRegion | null;
+  canvasEl?: HTMLCanvasElement | null; // direct board recording (no getDisplayMedia)
 }
 
 export function useScreenRecorder() {
   const [state, setState] = useState<RecordState>("idle");
   const [blob, setBlob] = useState<Blob | null>(null);
+  const [mimeType, setMimeType] = useState("video/mp4");
   const [duration, setDuration] = useState(0);
   const mrRef = useRef<MediaRecorder | null>(null);
   const screenStreamRef = useRef<MediaStream | null>(null);
@@ -33,6 +35,65 @@ export function useScreenRecorder() {
     const vConstraint = opts.quality === "1080p"
       ? { width: 1920, height: 1080, frameRate: 30 }
       : { width: 1280, height: 720, frameRate: 30 };
+
+    // Direct mode: record from canvas element — no screen share dialog
+    if (opts.canvasEl) {
+      const audioCtx = new AudioContext();
+      audioCtxRef.current = audioCtx;
+      const dest = audioCtx.createMediaStreamDestination();
+      let hasAudio = false;
+
+      if (opts.mic) {
+        try {
+          const micStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+          audioCtx.createMediaStreamSource(micStream).connect(dest);
+          hasAudio = true;
+        } catch { /* mic denied */ }
+      }
+      if (opts.musicFile) {
+        try {
+          const url = URL.createObjectURL(opts.musicFile);
+          const audio = new Audio(url);
+          audio.loop = true;
+          musicAudioRef.current = audio;
+          await audio.play();
+          const src = audioCtx.createMediaElementSource(audio);
+          src.connect(dest);
+          src.connect(audioCtx.destination);
+          hasAudio = true;
+        } catch { /* music failed */ }
+      }
+
+      const audioTracks = hasAudio ? dest.stream.getAudioTracks() : [];
+      const videoTracks = opts.canvasEl.captureStream(60).getVideoTracks();
+      const recordStream = new MediaStream([...videoTracks, ...audioTracks]);
+
+      const mime =
+        MediaRecorder.isTypeSupported("video/mp4") ? "video/mp4" :
+        MediaRecorder.isTypeSupported("video/webm;codecs=vp9,opus") ? "video/webm;codecs=vp9,opus" :
+        "video/webm";
+      setMimeType(mime);
+      const mr = new MediaRecorder(recordStream, { mimeType: mime });
+      mrRef.current = mr;
+
+      mr.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data); };
+      mr.onstop = () => {
+        const b = new Blob(chunksRef.current, { type: mime });
+        setBlob(b);
+        setState("stopped");
+        if (timerRef.current) clearInterval(timerRef.current);
+        audioCtx.close();
+        if (musicAudioRef.current) { musicAudioRef.current.pause(); musicAudioRef.current = null; }
+      };
+
+      mr.start(100); // small chunks = smooth playback
+      startTimeRef.current = Date.now();
+      setState("recording");
+      timerRef.current = setInterval(() => {
+        setDuration(Math.floor((Date.now() - startTimeRef.current) / 1000));
+      }, 1000);
+      return;
+    }
 
     const screenStream = await navigator.mediaDevices.getDisplayMedia({
       video: vConstraint as any,
@@ -106,17 +167,19 @@ export function useScreenRecorder() {
       recordStream = new MediaStream([...screenStream.getVideoTracks(), ...audioTracks]);
     }
 
-    const mimeType = MediaRecorder.isTypeSupported("video/webm;codecs=vp9,opus")
-      ? "video/webm;codecs=vp9,opus"
-      : "video/webm";
-    const mr = new MediaRecorder(recordStream, { mimeType });
+    const mime =
+      MediaRecorder.isTypeSupported("video/mp4") ? "video/mp4" :
+      MediaRecorder.isTypeSupported("video/webm;codecs=vp9,opus") ? "video/webm;codecs=vp9,opus" :
+      "video/webm";
+    setMimeType(mime);
+    const mr = new MediaRecorder(recordStream, { mimeType: mime });
     mrRef.current = mr;
 
     mr.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data); };
     mr.onstop = () => {
       if (rafRef.current !== null) { cancelAnimationFrame(rafRef.current); rafRef.current = null; }
       if (cropVideoRef.current) { cropVideoRef.current.pause(); cropVideoRef.current.srcObject = null; cropVideoRef.current = null; }
-      const b = new Blob(chunksRef.current, { type: "video/webm" });
+      const b = new Blob(chunksRef.current, { type: mime });
       setBlob(b);
       setState("stopped");
       if (timerRef.current) clearInterval(timerRef.current);
@@ -171,5 +234,5 @@ export function useScreenRecorder() {
     setDuration(0);
   }, []);
 
-  return { state, blob, duration, start, stop, pause, resume, reset };
+  return { state, blob, mimeType, duration, start, stop, pause, resume, reset };
 }
