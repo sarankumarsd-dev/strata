@@ -51,6 +51,62 @@ const TOOLS: { id: ToolId; icon: any; label: string; hint: string }[] = [
 // Shared glass panel styling — fully transparent with heavy blur so the map bleeds through.
 const PANEL = "border border-white/10 bg-transparent backdrop-blur-xl shadow-2xl";
 
+function GlitterDots() {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d")!;
+    const W = canvas.offsetWidth || 100;
+    const H = canvas.offsetHeight || 32;
+    canvas.width = W;
+    canvas.height = H;
+    const dots = Array.from({ length: 28 }, () => ({
+      x: Math.random() * W,
+      y: Math.random() * H,
+      r: Math.random() * 1.8 + 0.4,
+      vx: (Math.random() - 0.5) * 0.25,
+      vy: (Math.random() - 0.5) * 0.25,
+      opacity: Math.random(),
+      fadeDir: Math.random() > 0.5 ? 1 : -1,
+      speed: Math.random() * 0.02 + 0.008,
+    }));
+    let rafId: number;
+    function draw() {
+      ctx.clearRect(0, 0, W, H);
+      for (const d of dots) {
+        d.x += d.vx;
+        d.y += d.vy;
+        d.opacity += d.fadeDir * d.speed;
+        if (d.opacity >= 1) { d.opacity = 1; d.fadeDir = -1; }
+        if (d.opacity <= 0) {
+          d.opacity = 0; d.fadeDir = 1;
+          d.x = Math.random() * W;
+          d.y = Math.random() * H;
+        }
+        if (d.x < 0) d.x = W;
+        if (d.x > W) d.x = 0;
+        if (d.y < 0) d.y = H;
+        if (d.y > H) d.y = 0;
+        ctx.beginPath();
+        ctx.arc(d.x, d.y, d.r, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(220, 38, 38, ${d.opacity})`;
+        ctx.fill();
+      }
+      rafId = requestAnimationFrame(draw);
+    }
+    draw();
+    return () => cancelAnimationFrame(rafId);
+  }, []);
+  return (
+    <canvas
+      ref={canvasRef}
+      className="absolute inset-0 w-full h-full pointer-events-none"
+      style={{ borderRadius: "inherit" }}
+    />
+  );
+}
+
 function GunCard({ g, selected, onSelect }: { g: import("@/lib/guns").Gun; selected: boolean; onSelect: () => void }) {
   return (
     <button
@@ -378,7 +434,7 @@ export function BoardEditor({ map, initial }: Props) {
 
       {/* ===== Floating top bar ===== */}
       <div className={`absolute left-0 right-0 top-0 z-30 flex items-center gap-2 px-3 py-2 ${PANEL} rounded-none`}>
-        <Link to="/maps" className="flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-semibold transition-colors hover:bg-accent/50" style={{ color: "#39ff14", border: "1px solid #39ff1466", background: "#39ff140f" }}>
+        <Link to="/maps" className="flex h-8 items-center gap-1.5 rounded-md px-2.5 text-xs font-semibold transition-colors hover:bg-accent/50 shrink-0" style={{ color: "#39ff14", border: "1px solid #39ff1466", background: "#39ff140f" }}>
           <ArrowLeft className="h-3.5 w-3.5" /> Back to maps
         </Link>
         <div className="mx-1 h-4 w-px bg-border/60" />
@@ -412,13 +468,13 @@ export function BoardEditor({ map, initial }: Props) {
         </div>
         <div className="flex items-center gap-1">
           <Tooltip><TooltipTrigger asChild>
-            <Button variant="ghost" size="icon" onClick={undo} disabled={!history.length}><Undo2 className="h-4 w-4" /></Button>
+            <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={undo} disabled={!history.length}><Undo2 className="h-3.5 w-3.5" /></Button>
           </TooltipTrigger><TooltipContent>Undo</TooltipContent></Tooltip>
           <Tooltip><TooltipTrigger asChild>
-            <Button variant="ghost" size="icon" onClick={redo} disabled={!future.length}><Redo2 className="h-4 w-4" /></Button>
+            <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={redo} disabled={!future.length}><Redo2 className="h-3.5 w-3.5" /></Button>
           </TooltipTrigger><TooltipContent>Redo</TooltipContent></Tooltip>
           <Tooltip><TooltipTrigger asChild>
-            <Button variant="ghost" size="icon" onClick={clearAll}><Trash2 className="h-4 w-4" /></Button>
+            <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={clearAll}><Trash2 className="h-3.5 w-3.5" /></Button>
           </TooltipTrigger><TooltipContent>Clear board</TooltipContent></Tooltip>
         </div>
         {/* ===== Record button ===== */}
@@ -426,17 +482,18 @@ export function BoardEditor({ map, initial }: Props) {
           {recorder.state === "idle" && (
             <button
               onClick={() => setRecPanelOpen((v) => !v)}
-              className="flex items-center gap-1.5 rounded-md border border-red-500/40 bg-red-500/10 px-2.5 py-1.5 text-xs font-semibold text-red-400 hover:bg-red-500/20 transition-colors"
+              className="relative flex h-8 items-center gap-1.5 rounded-md border border-red-600/70 bg-black px-2.5 text-xs font-semibold text-red-400 hover:border-red-500 overflow-hidden transition-colors"
             >
-              <Video className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">Record</span>
-              <ChevronDown className="h-3 w-3 opacity-60" />
+              <GlitterDots />
+              <Video className="relative z-10 h-3.5 w-3.5" />
+              <span className="relative z-10 hidden sm:inline">Record</span>
+              <ChevronDown className="relative z-10 h-3 w-3 opacity-60" />
             </button>
           )}
           {recorder.state === "recording" && (
             <button
               onClick={recorder.stop}
-              className="flex items-center gap-1.5 rounded-md border border-red-500/60 bg-red-500/20 px-2.5 py-1.5 text-xs font-semibold text-red-400 hover:bg-red-500/30 transition-colors"
+              className="flex h-8 items-center gap-1.5 rounded-md border border-red-500/60 bg-red-500/20 px-2.5 text-xs font-semibold text-red-400 hover:bg-red-500/30 transition-colors"
             >
               <span className="animate-rec-pulse h-2 w-2 rounded-full bg-red-500 shrink-0" />
               <span className="font-mono text-red-300">{formatDuration(recorder.duration)}</span>
@@ -524,25 +581,25 @@ export function BoardEditor({ map, initial }: Props) {
           )}
         </div>
 
-        <div className="mx-1 hidden items-center gap-2 rounded-md border border-border/60 bg-background/50 px-2 py-1 sm:flex">
-          <Eye className="h-4 w-4 text-muted-foreground" />
+        <div className="mx-1 hidden h-8 items-center gap-2 rounded-md border border-border/60 bg-background/50 px-2.5 sm:flex">
+          <Eye className="h-3.5 w-3.5 text-muted-foreground" />
           <Label className="text-xs text-muted-foreground">Public</Label>
           <Switch checked={isPublic} onCheckedChange={setIsPublic} />
         </div>
         {aiButtonForTool && (
-          <Button onClick={aiUnavailable}
-            className="gap-2 bg-gradient-to-r from-primary to-secondary text-primary-foreground hover:opacity-90 animate-pulse-glow">
-            <Sparkles className="h-4 w-4" /> <span className="hidden md:inline">AI: {aiButtonForTool.label}</span>
+          <Button onClick={aiUnavailable} size="sm"
+            className="h-8 gap-1.5 bg-gradient-to-r from-primary to-secondary text-primary-foreground hover:opacity-90 animate-pulse-glow text-xs">
+            <Sparkles className="h-3.5 w-3.5" /> <span className="hidden md:inline">AI: {aiButtonForTool.label}</span>
           </Button>
         )}
         <div className="relative">
           <Button
             variant="outline"
             size="sm"
-            className="gap-2 border-primary/40 text-primary hover:bg-primary/10"
+            className="h-8 gap-1.5 border-primary/40 text-primary hover:bg-primary/10 text-xs"
             onClick={() => { setImportDialogOpen(true); setDropCardSearch(""); }}
           >
-            <Layers className="h-4 w-4" />
+            <Layers className="h-3.5 w-3.5" />
             <span className="hidden sm:inline">{activeDropCardTitle ?? "Import Drop"}</span>
           </Button>
           {activeDropCardTitle && (
@@ -558,10 +615,11 @@ export function BoardEditor({ map, initial }: Props) {
           onClick={handleSave}
           disabled={saving}
           variant="default"
-          className="gap-2"
+          size="sm"
+          className="h-8 gap-1.5 text-xs"
           style={shakeSave ? { animation: "shake 0.4s ease" } : undefined}
         >
-          <Save className="h-4 w-4" /> <span className="hidden sm:inline">{saving ? "Saving…" : initial?.id ? "Update" : "Save"}</span>
+          <Save className="h-3.5 w-3.5" /> <span className="hidden sm:inline">{saving ? "Saving…" : initial?.id ? "Update" : "Save"}</span>
         </Button>
       </div>
 
