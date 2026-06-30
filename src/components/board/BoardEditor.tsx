@@ -468,7 +468,7 @@ export function BoardEditor({ map, initial }: Props) {
       </div>
 
       {/* ===== Floating top bar ===== */}
-      <div className={`absolute left-0 right-0 top-0 z-30 flex items-center gap-2 px-3 py-2 ${PANEL} rounded-none`}>
+      <div className="absolute left-0 right-0 top-0 z-30 flex items-center gap-2 px-3 py-2 border-b border-transparent bg-transparent rounded-none transition-all duration-300 hover:border-white/10 hover:bg-black/40 hover:backdrop-blur-xl">
         <Link to="/maps" className="flex h-8 items-center gap-1.5 rounded-md px-2.5 text-xs font-semibold transition-colors hover:bg-accent/50 shrink-0" style={{ color: "#39ff14", border: "1px solid #39ff1466", background: "#39ff140f" }}>
           <ArrowLeft className="h-3.5 w-3.5" /> Back to maps
         </Link>
@@ -525,23 +525,23 @@ export function BoardEditor({ map, initial }: Props) {
                 }
                 setRecPanelOpen((v) => !v);
               }}
-              className="relative flex h-8 items-center gap-1.5 rounded-md border border-red-600/70 bg-black px-2.5 text-xs font-semibold text-red-400 hover:border-red-500 overflow-hidden transition-colors"
-              style={shakeRec ? { animation: "shake 0.4s ease" } : undefined}
+              className="flex h-8 items-center gap-1.5 rounded-md px-2.5 text-xs font-semibold transition-colors hover:bg-red-500/25 shrink-0"
+              style={{ color: "#ff3333", border: "1px solid #ff333360", background: "#ff333322", ...(shakeRec ? { animation: "shake 0.4s ease" } : {}) }}
             >
-              <GlitterDots />
-              <Video className="relative z-10 h-3.5 w-3.5" />
-              <span className="relative z-10 hidden sm:inline">Record</span>
-              <ChevronDown className="relative z-10 h-3 w-3 opacity-60" />
+              <Video className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">Record</span>
+              <ChevronDown className="h-3 w-3 opacity-60" />
             </button>
           )}
           {recorder.state === "recording" && (
             <button
               onClick={recorder.stop}
-              className="flex h-8 items-center gap-1.5 rounded-md border border-red-500/60 bg-red-500/20 px-2.5 text-xs font-semibold text-red-400 hover:bg-red-500/30 transition-colors"
+              className="relative flex h-8 items-center gap-1.5 rounded-md border border-red-500/60 bg-red-500/20 px-2.5 text-xs font-semibold text-red-400 hover:bg-red-500/30 transition-colors overflow-hidden"
             >
-              <span className="animate-rec-pulse h-2 w-2 rounded-full bg-red-500 shrink-0" />
-              <span className="font-mono text-red-300">{formatDuration(recorder.duration)}</span>
-              <StopCircle className="h-3.5 w-3.5 ml-0.5" />
+              <GlitterDots />
+              <span className="relative z-10 animate-rec-pulse h-2 w-2 rounded-full bg-red-500 shrink-0" />
+              <span className="relative z-10 font-mono text-red-300">{formatDuration(recorder.duration)}</span>
+              <StopCircle className="relative z-10 h-3.5 w-3.5 ml-0.5" />
             </button>
           )}
 
@@ -847,7 +847,7 @@ export function BoardEditor({ map, initial }: Props) {
       {/* ===== Floating recording controls (draggable, icon-only) ===== */}
       {(recorder.state === "recording" || recorder.state === "paused") && (
         <div
-          className="absolute z-40 flex items-center gap-1 rounded-full border border-red-500/40 bg-black/85 backdrop-blur-xl px-2 py-1 shadow-2xl cursor-grab active:cursor-grabbing select-none"
+          className="absolute z-40 flex items-center gap-1 rounded-full border border-red-500/70 bg-black overflow-hidden px-2 py-1 shadow-2xl shadow-red-500/20 cursor-grab active:cursor-grabbing select-none"
           style={floatPos ? { left: floatPos.x, top: floatPos.y } : { bottom: 80, left: "50%", transform: "translateX(-50%)" }}
           onMouseDown={(e) => {
             e.preventDefault();
@@ -874,17 +874,18 @@ export function BoardEditor({ map, initial }: Props) {
             window.addEventListener("mouseup", onUp);
           }}
         >
-          <span className={`h-1.5 w-1.5 rounded-full bg-red-500 shrink-0 ${recorder.state === "recording" ? "animate-rec-pulse" : "opacity-30"}`} />
-          <span className="font-mono text-[9px] text-red-300 w-8 text-center tabular-nums">{formatDuration(recorder.duration)}</span>
-          <div className="w-px h-2.5 bg-white/15" />
+          <GlitterDots />
+          <span className={`relative z-10 h-1.5 w-1.5 rounded-full bg-red-500 shrink-0 ${recorder.state === "recording" ? "animate-rec-pulse" : "opacity-30"}`} />
+          <span className="relative z-10 font-mono text-[9px] text-red-300 w-8 text-center tabular-nums">{formatDuration(recorder.duration)}</span>
+          <div className="relative z-10 w-px h-2.5 bg-white/15" />
           <Tooltip>
             <TooltipTrigger asChild>
               {recorder.state === "recording" ? (
-                <button onClick={recorder.pause} className="grid h-5 w-5 place-items-center rounded-full hover:bg-white/15 text-white/70 hover:text-white transition-colors">
+                <button onClick={recorder.pause} className="relative z-10 grid h-5 w-5 place-items-center rounded-full hover:bg-white/15 text-white/70 hover:text-white transition-colors">
                   <Pause className="h-2.5 w-2.5" />
                 </button>
               ) : (
-                <button onClick={recorder.resume} className="grid h-5 w-5 place-items-center rounded-full hover:bg-primary/20 text-primary transition-colors">
+                <button onClick={recorder.resume} className="relative z-10 grid h-5 w-5 place-items-center rounded-full hover:bg-primary/20 text-primary transition-colors">
                   <Play className="h-2.5 w-2.5" />
                 </button>
               )}
@@ -893,7 +894,7 @@ export function BoardEditor({ map, initial }: Props) {
           </Tooltip>
           <Tooltip>
             <TooltipTrigger asChild>
-              <button onClick={recorder.stop} className="grid h-5 w-5 place-items-center rounded-full hover:bg-red-500/30 text-red-400 transition-colors">
+              <button onClick={recorder.stop} className="relative z-10 grid h-5 w-5 place-items-center rounded-full hover:bg-red-500/30 text-red-400 transition-colors">
                 <StopCircle className="h-2.5 w-2.5" />
               </button>
             </TooltipTrigger>
