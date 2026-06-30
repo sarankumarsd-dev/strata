@@ -6,3 +6,5 @@ public/maps/*.png
 package-lock.json
 .vercel
 .env*
+scripts/
+tsconfig.tsbuildinfo
