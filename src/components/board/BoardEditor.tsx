@@ -3,8 +3,9 @@ import {
   MousePointer2, Circle as CircleIcon, MapPin, Octagon, Mountain, TrendingDown,
   Crosshair, Route as RouteIcon, Flame, Type as TypeIcon, Undo2, Redo2, Trash2,
   Save, Eye, Sparkles, PanelRightClose, PanelRightOpen, ArrowLeft, Layers, X, Search,
-  Video, StopCircle, Download, Mic, MicOff, Music, ChevronDown, Pause, Play,
+  Video, StopCircle, Download, Mic, MicOff, Music, ChevronDown, Pause, Play, Crop, Check,
 } from "lucide-react";
+import type { CropRegion } from "@/hooks/useScreenRecorder";
 import { useScreenRecorder } from "@/hooks/useScreenRecorder";
 import { Link } from "react-router-dom";
 
@@ -222,6 +223,14 @@ export function BoardEditor({ map, initial }: Props) {
   const musicInputRef = useRef<HTMLInputElement>(null);
   const [floatPos, setFloatPos] = useState<{ x: number; y: number } | null>(null);
   const floatDragRef = useRef<{ startX: number; startY: number; origX: number; origY: number } | null>(null);
+  const [shakeRec, setShakeRec] = useState(false);
+
+  // Region selection
+  const [recRegionMode, setRecRegionMode] = useState(false);
+  const [recRegionSelecting, setRecRegionSelecting] = useState(false);
+  const [cropRegion, setCropRegion] = useState<CropRegion | null>(null);
+  const selStartRef = useRef<{ x: number; y: number } | null>(null);
+  const [selRect, setSelRect] = useState<CropRegion | null>(null);
 
   // Auto-show panel when cursor approaches right edge; auto-hide when it leaves.
   useEffect(() => {
@@ -282,8 +291,18 @@ export function BoardEditor({ map, initial }: Props) {
   async function handleStartRecording() {
     setRecPanelOpen(false);
     setFloatPos(null);
+    if (recRegionMode) {
+      setCropRegion(null);
+      setSelRect(null);
+      setRecRegionSelecting(true);
+      return;
+    }
+    await doStartRecording(null);
+  }
+
+  async function doStartRecording(region: CropRegion | null) {
     try {
-      await recorder.start({ mic: recMic, musicFile: recMusicFile, quality: recQuality });
+      await recorder.start({ mic: recMic, musicFile: recMusicFile, quality: recQuality, cropRegion: region });
     } catch (e: any) {
       if (e?.name !== "NotAllowedError") toast.error("Could not start recording");
     }
@@ -484,8 +503,17 @@ export function BoardEditor({ map, initial }: Props) {
         <div className="relative">
           {recorder.state === "idle" && (
             <button
-              onClick={() => setRecPanelOpen((v) => !v)}
+              onClick={() => {
+                if (!initial?.id) {
+                  toast.error("Save your strategy first before recording.");
+                  setShakeRec(true);
+                  setTimeout(() => setShakeRec(false), 500);
+                  return;
+                }
+                setRecPanelOpen((v) => !v);
+              }}
               className="relative flex h-8 items-center gap-1.5 rounded-md border border-red-600/70 bg-black px-2.5 text-xs font-semibold text-red-400 hover:border-red-500 overflow-hidden transition-colors"
+              style={shakeRec ? { animation: "shake 0.4s ease" } : undefined}
             >
               <GlitterDots />
               <Video className="relative z-10 h-3.5 w-3.5" />
@@ -572,12 +600,28 @@ export function BoardEditor({ map, initial }: Props) {
                 </button>
               </div>
 
+              {/* Crop region toggle */}
+              <button
+                onClick={() => { setRecRegionMode(v => !v); if (recRegionMode) setCropRegion(null); }}
+                className={`w-full flex items-center gap-2 rounded-md border px-2.5 py-2 text-xs transition-colors ${
+                  recRegionMode
+                    ? "border-primary/60 bg-primary/10 text-primary"
+                    : "border-white/10 text-muted-foreground hover:border-white/20"
+                }`}
+              >
+                <Crop className="h-3.5 w-3.5 shrink-0" />
+                {recRegionMode
+                  ? cropRegion ? `Region: ${Math.round(cropRegion.w)}×${Math.round(cropRegion.h)}px` : "Draw region on map"
+                  : "Select region (optional)"}
+              </button>
+
               {/* Start button */}
               <button
                 onClick={handleStartRecording}
                 className="w-full flex items-center justify-center gap-2 rounded-md bg-red-500 hover:bg-red-600 text-white text-xs font-semibold py-2 transition-colors"
               >
-                <Video className="h-3.5 w-3.5" /> Start Recording
+                <Video className="h-3.5 w-3.5" />
+                {recRegionMode && !cropRegion ? "Draw Region First" : "Start Recording"}
               </button>
               <p className="text-[10px] text-muted-foreground leading-tight">You'll choose which tab/window to capture.</p>
             </div>
@@ -683,6 +727,85 @@ export function BoardEditor({ map, initial }: Props) {
           </button>
         )}
       </div>
+
+      {/* ===== Region selection overlay ===== */}
+      {recRegionSelecting && (
+        <div
+          className="absolute inset-0 z-50 cursor-crosshair select-none"
+          style={{ background: "rgba(0,0,0,0.45)" }}
+          onMouseDown={(e) => {
+            selStartRef.current = { x: e.clientX, y: e.clientY };
+            setSelRect(null);
+          }}
+          onMouseMove={(e) => {
+            if (!selStartRef.current) return;
+            const x = Math.min(selStartRef.current.x, e.clientX);
+            const y = Math.min(selStartRef.current.y, e.clientY);
+            const w = Math.abs(e.clientX - selStartRef.current.x);
+            const h = Math.abs(e.clientY - selStartRef.current.y);
+            setSelRect({ x, y, w, h });
+          }}
+          onMouseUp={() => {
+            if (selRect && selRect.w > 20 && selRect.h > 20) {
+              setCropRegion(selRect);
+            }
+            selStartRef.current = null;
+          }}
+        >
+          {/* Instruction */}
+          <div className="absolute top-14 left-1/2 -translate-x-1/2 flex items-center gap-2 rounded-full border border-white/20 bg-black/70 backdrop-blur-xl px-4 py-2 text-xs text-white font-semibold pointer-events-none">
+            <Crop className="h-3.5 w-3.5 text-primary" /> Drag to select recording region
+          </div>
+
+          {/* Selection rectangle */}
+          {selRect && selRect.w > 4 && selRect.h > 4 && (
+            <div
+              className="absolute pointer-events-none"
+              style={{ left: selRect.x, top: selRect.y, width: selRect.w, height: selRect.h,
+                border: "2px dashed rgba(239,68,68,0.9)", background: "rgba(239,68,68,0.08)" }}
+            >
+              <span className="absolute -top-5 left-0 font-mono text-[10px] text-red-400">
+                {Math.round(selRect.w)} × {Math.round(selRect.h)}
+              </span>
+            </div>
+          )}
+
+          {/* Confirmed region highlight + action buttons */}
+          {cropRegion && (
+            <>
+              <div
+                className="absolute pointer-events-none"
+                style={{ left: cropRegion.x, top: cropRegion.y, width: cropRegion.w, height: cropRegion.h,
+                  border: "2px solid rgba(239,68,68,0.9)", background: "rgba(239,68,68,0.06)",
+                  boxShadow: "0 0 0 9999px rgba(0,0,0,0.45)" }}
+              />
+              <div
+                className="absolute flex gap-2"
+                style={{ left: cropRegion.x, top: cropRegion.y + cropRegion.h + 10 }}
+              >
+                <button
+                  onClick={(e) => { e.stopPropagation(); setRecRegionSelecting(false); doStartRecording(cropRegion); }}
+                  className="flex items-center gap-1.5 rounded-md bg-red-500 hover:bg-red-600 px-3 py-1.5 text-xs font-semibold text-white transition-colors"
+                >
+                  <Video className="h-3.5 w-3.5" /> Record this region
+                </button>
+                <button
+                  onClick={(e) => { e.stopPropagation(); setCropRegion(null); setSelRect(null); }}
+                  className="flex items-center gap-1.5 rounded-md border border-white/20 bg-black/60 hover:bg-white/10 px-3 py-1.5 text-xs text-white transition-colors"
+                >
+                  <X className="h-3.5 w-3.5" /> Redraw
+                </button>
+                <button
+                  onClick={(e) => { e.stopPropagation(); setRecRegionSelecting(false); setCropRegion(null); }}
+                  className="flex items-center gap-1.5 rounded-md border border-white/20 bg-black/60 hover:bg-white/10 px-3 py-1.5 text-xs text-white transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+      )}
 
       {/* ===== Floating recording controls (draggable, icon-only) ===== */}
       {(recorder.state === "recording" || recorder.state === "paused") && (

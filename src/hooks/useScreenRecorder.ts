@@ -2,10 +2,13 @@ import { useRef, useState, useCallback } from "react";
 
 export type RecordState = "idle" | "recording" | "paused" | "stopped";
 
+export interface CropRegion { x: number; y: number; w: number; h: number }
+
 export interface RecordOptions {
   mic: boolean;
   musicFile: File | null;
   quality: "720p" | "1080p";
+  cropRegion?: CropRegion | null;
 }
 
 export function useScreenRecorder() {
@@ -19,6 +22,8 @@ export function useScreenRecorder() {
   const audioCtxRef = useRef<AudioContext | null>(null);
   const musicAudioRef = useRef<HTMLAudioElement | null>(null);
   const startTimeRef = useRef(0);
+  const rafRef = useRef<number | null>(null);
+  const cropVideoRef = useRef<HTMLVideoElement | null>(null);
 
   const start = useCallback(async (opts: RecordOptions) => {
     chunksRef.current = [];
@@ -45,9 +50,7 @@ export function useScreenRecorder() {
         const micStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
         audioCtx.createMediaStreamSource(micStream).connect(dest);
         hasAudio = true;
-      } catch {
-        // mic denied — continue without
-      }
+      } catch { /* mic denied */ }
     }
 
     if (opts.musicFile) {
@@ -61,25 +64,58 @@ export function useScreenRecorder() {
         src.connect(dest);
         src.connect(audioCtx.destination);
         hasAudio = true;
-      } catch {
-        // music load failed — continue without
-      }
+      } catch { /* music failed */ }
     }
 
-    const tracks = [
-      ...screenStream.getVideoTracks(),
-      ...(hasAudio ? dest.stream.getAudioTracks() : []),
-    ];
-    const combined = new MediaStream(tracks);
+    const audioTracks = hasAudio ? dest.stream.getAudioTracks() : [];
+    let recordStream: MediaStream;
+
+    if (opts.cropRegion) {
+      // Canvas-based crop: draw cropped region from screen video onto an offscreen canvas
+      const { x, y, w, h } = opts.cropRegion;
+      const outW = opts.quality === "1080p" ? 1920 : 1280;
+      const outH = Math.round(outW * (h / w));
+
+      const video = document.createElement("video");
+      video.muted = true;
+      video.srcObject = screenStream;
+      cropVideoRef.current = video;
+
+      await new Promise<void>((resolve) => {
+        video.onloadedmetadata = () => { video.play().then(() => resolve()); };
+      });
+
+      const canvas = document.createElement("canvas");
+      canvas.width = outW;
+      canvas.height = outH;
+      const ctx = canvas.getContext("2d")!;
+
+      const draw = () => {
+        if (video.readyState >= 2) {
+          // Map viewport px → video px (accounts for device pixel ratio / tab scale)
+          const scaleX = video.videoWidth / window.innerWidth;
+          const scaleY = video.videoHeight / window.innerHeight;
+          ctx.drawImage(video, x * scaleX, y * scaleY, w * scaleX, h * scaleY, 0, 0, outW, outH);
+        }
+        rafRef.current = requestAnimationFrame(draw);
+      };
+      draw();
+
+      recordStream = new MediaStream([...canvas.captureStream(30).getVideoTracks(), ...audioTracks]);
+    } else {
+      recordStream = new MediaStream([...screenStream.getVideoTracks(), ...audioTracks]);
+    }
 
     const mimeType = MediaRecorder.isTypeSupported("video/webm;codecs=vp9,opus")
       ? "video/webm;codecs=vp9,opus"
       : "video/webm";
-    const mr = new MediaRecorder(combined, { mimeType });
+    const mr = new MediaRecorder(recordStream, { mimeType });
     mrRef.current = mr;
 
     mr.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data); };
     mr.onstop = () => {
+      if (rafRef.current !== null) { cancelAnimationFrame(rafRef.current); rafRef.current = null; }
+      if (cropVideoRef.current) { cropVideoRef.current.pause(); cropVideoRef.current.srcObject = null; cropVideoRef.current = null; }
       const b = new Blob(chunksRef.current, { type: "video/webm" });
       setBlob(b);
       setState("stopped");
@@ -88,9 +124,8 @@ export function useScreenRecorder() {
       if (musicAudioRef.current) { musicAudioRef.current.pause(); musicAudioRef.current = null; }
     };
 
-    // User stops via browser share bar
     screenStream.getVideoTracks()[0].onended = () => {
-      if (mr.state === "recording") mr.stop();
+      if (mr.state === "recording" || mr.state === "paused") mr.stop();
     };
 
     mr.start(1000);
