@@ -10,13 +10,54 @@ export function AppHeader() {
   return (
     <header className="sticky top-0 z-40 border-b border-border bg-background/80 backdrop-blur-xl">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6">
-        <Link to="/" className="flex items-center gap-3 group">
-          <div className="h-[54px] w-[54px] shrink-0 rounded-lg overflow-hidden bg-black">
-            <img src="/icon.gif" alt="Strata icon" className="h-full w-full object-cover" />
+        <Link to="/" className="relative flex items-center gap-3 group">
+          <div className="relative h-[60px] w-[170px] shrink-0 -mt-4 -mb-2">
+            <div className="absolute inset-0 gun-crystal" style={{ transform: "scaleX(-1) scale(2, 1.7)" }}>
+              <img
+                src="/m416-glacier.png"
+                alt="Strata icon"
+                className="h-full w-full object-contain gun-recoil"
+              />
+              <div
+                className="absolute inset-0 overflow-hidden"
+                style={{
+                  maskImage: "url(/m416-glacier.png)",
+                  WebkitMaskImage: "url(/m416-glacier.png)",
+                  maskSize: "contain",
+                  WebkitMaskSize: "contain",
+                  maskRepeat: "no-repeat",
+                  WebkitMaskRepeat: "no-repeat",
+                  maskPosition: "center",
+                  WebkitMaskPosition: "center",
+                }}
+              >
+                <div className="gun-shine-bar" />
+              </div>
+            </div>
+            <div className="muzzle-flash absolute" style={{ left: 126, top: 14 }} />
+            {[
+              { left: 31, top: 21, delay: 0, duration: 3.2 },
+              { left: 49, top: 23, delay: 1.4, duration: 4.1 },
+              { left: 65, top: 31, delay: 2.6, duration: 3.7 },
+              { left: 83, top: 21, delay: 0.7, duration: 4.4 },
+              { left: 99, top: 21, delay: 3.3, duration: 3.4 },
+              { left: 117, top: 21, delay: 1.9, duration: 4.0 },
+              { left: 133, top: 21, delay: 2.2, duration: 3.9 },
+            ].map((s, i) => (
+              <span
+                key={i}
+                className="gun-sparkle"
+                style={{ left: s.left, top: s.top, animationDelay: `${s.delay}s`, animationDuration: `${s.duration}s` }}
+              />
+            ))}
           </div>
+          <div className="bullet-glacier absolute" style={{ left: 150, top: 15 }} />
           <div className="flex flex-col justify-between" style={{ height: "54px" }}>
-            <span className="font-display font-bold text-silver-shine" style={{ fontSize: "38px", lineHeight: 1, letterSpacing: "0.04em" }}>
-              Stra<span className="text-primary">ta</span>
+            <span className="relative inline-block w-fit">
+              <span className="font-display font-bold text-silver-shine strata-impact" style={{ fontSize: "38px", lineHeight: 1, letterSpacing: "0.04em" }}>
+                Stra<span className="text-primary">ta</span>
+              </span>
+              <span className="smoke-puff absolute" style={{ left: 0, top: -6 }} />
             </span>
             <span className="text-white font-sans font-medium tracking-widest uppercase opacity-80" style={{ fontSize: "11px", letterSpacing: "0.18em" }}>
               Game strategy at its peak

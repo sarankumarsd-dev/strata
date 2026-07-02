@@ -280,6 +280,128 @@
   animation: rec-pulse 1s ease-in-out infinite;
 }
 
+/* Header gun sequence: glacier shine sweep -> recoil -> muzzle flash -> bullet -> impact -> smoke */
+/* The gun container is mirrored with scaleX(-1), so local +X renders as screen -X:
+   sweep keyframes run 100% -> -100% to travel left -> right on screen, and recoil
+   uses +X to kick the gun backward (screen-left). */
+@keyframes gun-shine-sweep {
+  0%       { transform: translateX(100%); opacity: 0; }
+  4%       { opacity: 1; }
+  32%      { transform: translateX(-100%); opacity: 1; }
+  36%, 100% { opacity: 0; }
+}
+.gun-shine-bar {
+  position: absolute;
+  top: 0;
+  left: -50%;
+  width: 200%;
+  height: 100%;
+  background-image: linear-gradient(
+    100deg,
+    transparent 34%,
+    rgba(210,245,255,0.15) 42%,
+    rgba(230,250,255,0.55) 47%,
+    rgba(255,255,255,0.95) 50%,
+    rgba(230,250,255,0.55) 53%,
+    rgba(210,245,255,0.15) 58%,
+    transparent 66%
+  );
+  animation: gun-shine-sweep 10s linear infinite;
+}
+
+/* Constant soft icy glow on the gun body */
+.gun-crystal {
+  filter: drop-shadow(0 0 5px rgba(170,240,255,0.45));
+}
+
+/* Star sparkles twinkling at scattered points on the gun, like light off a diamond */
+@keyframes sparkle-twinkle {
+  0%        { opacity: 0; transform: scale(0.2) rotate(0deg); }
+  6%        { opacity: 1; transform: scale(1.1) rotate(25deg); }
+  12%       { opacity: 0; transform: scale(0.2) rotate(50deg); }
+  100%      { opacity: 0; transform: scale(0.2) rotate(50deg); }
+}
+.gun-sparkle {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  background: radial-gradient(circle, rgba(255,255,255,1) 0%, rgba(230,252,255,1) 45%, transparent 72%);
+  clip-path: polygon(50% 0%, 59% 41%, 100% 50%, 59% 59%, 50% 100%, 41% 59%, 0% 50%, 41% 41%);
+  filter: drop-shadow(0 0 3px rgba(255,255,255,1)) drop-shadow(0 0 6px rgba(190,245,255,0.9));
+  opacity: 0;
+  animation: sparkle-twinkle 3.6s linear infinite;
+  pointer-events: none;
+}
+
+@keyframes gun-recoil {
+  0%, 32%   { transform: translateX(0); }
+  33.5%     { transform: translateX(9px); }
+  36%       { transform: translateX(-1px); }
+  38%, 100% { transform: translateX(0); }
+}
+.gun-recoil {
+  animation: gun-recoil 10s ease-in-out infinite;
+}
+
+@keyframes muzzle-flash {
+  0%, 32%   { opacity: 0; transform: scale(0.4); }
+  33.5%     { opacity: 1; transform: scale(1.4); }
+  36%       { opacity: 0.6; transform: scale(1); }
+  38%, 100% { opacity: 0; transform: scale(0.4); }
+}
+.muzzle-flash {
+  width: 20px;
+  height: 20px;
+  border-radius: 9999px;
+  background: radial-gradient(circle, rgba(255,255,255,1) 0%, rgba(180,240,255,0.9) 35%, rgba(120,220,255,0.4) 60%, transparent 75%);
+  filter: blur(0.5px);
+  animation: muzzle-flash 10s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes bullet-glacier {
+  0%, 32.5% { opacity: 0; transform: translateX(0); }
+  33%       { opacity: 1; transform: translateX(8px); }
+  37.5%     { opacity: 1; transform: translateX(84px); }
+  38%       { opacity: 0; transform: translateX(92px); }
+  100%      { opacity: 0; transform: translateX(92px); }
+}
+.bullet-glacier {
+  width: 10px;
+  height: 4px;
+  border-radius: 9999px;
+  background: linear-gradient(90deg, transparent, rgba(150,230,255,0.9), rgba(255,255,255,1));
+  box-shadow: 0 0 8px 2px rgba(150,230,255,0.8);
+  animation: bullet-glacier 10s linear infinite;
+  pointer-events: none;
+}
+
+@keyframes strata-impact {
+  0%, 37%   { text-shadow: none; transform: translateX(0); filter: brightness(1); }
+  38.5%     { text-shadow: 0 0 18px rgba(180,240,255,0.95), 0 0 34px rgba(120,220,255,0.7); transform: translateX(-2px); filter: brightness(1.5); }
+  41%       { transform: translateX(1px); }
+  44%, 100% { text-shadow: none; transform: translateX(0); filter: brightness(1); }
+}
+.strata-impact {
+  animation: strata-impact 10s ease-in-out infinite;
+}
+
+@keyframes smoke-puff {
+  0%, 38%   { opacity: 0; transform: scale(0.7) translateY(0); }
+  40%       { opacity: 0.8; transform: scale(0.9) translateY(0); }
+  58%       { opacity: 0.5; transform: scale(1.1) translateY(-8px); }
+  75%, 100% { opacity: 0; transform: scale(1.25) translateY(-16px); }
+}
+.smoke-puff {
+  width: 100%;
+  height: 26px;
+  border-radius: 9999px;
+  background: radial-gradient(ellipse at center, rgba(220,240,255,0.8) 0%, rgba(200,220,240,0.45) 45%, transparent 75%);
+  filter: blur(3px);
+  animation: smoke-puff 10s ease-in-out infinite;
+  pointer-events: none;
+}
+
 /* Transparent scrollbar — thumb only, no track */
 ::-webkit-scrollbar { width: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }
