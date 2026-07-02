@@ -1,0 +1,40 @@
+{
+  "id": "erangel-001",
+  "map": "erangel",
+  "title": "Pochinki Squeeze",
+  "start": { "x": 0.42, "y": 0.61 },
+  "parTimeSec": 90,
+  "maxTimeSec": 150,
+  "zonePhases": [
+    { "center": { "x": 0.50, "y": 0.55 }, "radius": 0.30, "startSec": 0, "dps": 1 },
+    { "center": { "x": 0.53, "y": 0.50 }, "radius": 0.18, "startSec": 45, "dps": 2 },
+    { "center": { "x": 0.55, "y": 0.48 }, "radius": 0.10, "startSec": 100, "dps": 4 }
+  ],
+  "goal": { "x": 0.55, "y": 0.48, "radius": 0.02 },
+  "enemies": [
+    {
+      "id": "squad-a",
+      "archetype": "aggressive",
+      "sightRadius": 0.06,
+      "speed": 0.004,
+      "route": [
+        { "x": 0.30, "y": 0.40 },
+        { "x": 0.45, "y": 0.45 },
+        { "x": 0.52, "y": 0.50 }
+      ],
+      "loop": false
+    },
+    {
+      "id": "squad-b",
+      "archetype": "edge-rat",
+      "sightRadius": 0.05,
+      "speed": 0.002,
+      "route": [
+        { "x": 0.62, "y": 0.70 },
+        { "x": 0.58, "y": 0.60 }
+      ],
+      "loop": true
+    }
+  ],
+  "cover": []
+}
