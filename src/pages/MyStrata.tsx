@@ -178,7 +178,7 @@ export function MyStrata() {
           ) : (
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {strategies.map((s) => (
-                <div key={s.id} className="group relative flex flex-col rounded-xl border border-border bg-card overflow-hidden transition-all hover:border-primary/50 hover:shadow-lg">
+                <div key={s.id} className="drop-card group relative flex flex-col rounded-xl border border-border bg-card overflow-hidden transition-all">
                   <div className="h-2 w-full bg-gradient-to-r from-primary to-secondary opacity-70" />
                   <div className="flex flex-1 flex-col gap-2 p-4">
                     <div className="flex items-start justify-between gap-2">
@@ -186,12 +186,21 @@ export function MyStrata() {
                         <h3 className="font-heading font-semibold truncate group-hover:text-primary transition-colors">{s.title}</h3>
                         <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">{s.map}</p>
                       </div>
+                      {/* Delete button with traveling red border around its own edges */}
                       <button
                         onClick={() => deleteStrategy(s.id)}
-                        className="grid h-7 w-7 shrink-0 place-items-center rounded-md text-muted-foreground opacity-0 group-hover:opacity-100 hover:bg-destructive/20 hover:text-destructive transition-all"
+                        className="delete-btn relative grid h-7 w-7 shrink-0 place-items-center rounded-md text-muted-foreground opacity-0 group-hover:opacity-100 hover:bg-destructive/10 hover:text-destructive transition-all overflow-hidden"
                         title="Delete"
                       >
-                        <Trash2 className="h-3.5 w-3.5" />
+                        <svg className="travel-border-svg pointer-events-none absolute inset-0 w-full h-full opacity-0">
+                          <rect x="0.75" y="0.75" width="98.5%" height="98.5%" rx="5" ry="5"
+                            fill="none" stroke="#ef4444" strokeWidth="1.5"
+                            strokeDasharray="12 100" strokeLinecap="round"
+                            pathLength="112"
+                            style={{ animation: "travel-border 0.9s linear infinite", strokeDashoffset: 12 }}
+                          />
+                        </svg>
+                        <Trash2 className="h-3.5 w-3.5 relative z-10" />
                       </button>
                     </div>
                     {s.description && (
